@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<h1 class="mb-3"><i class="bi bi-truck"></i> Поездки СТОЛИЦА</h1>
+
+<!-- Форма создания -->
+<div class="card trip-card mb-4">
+    <div class="card-header"><i class="bi bi-plus-circle"></i> Новая поездка</div>
+    <div class="card-body">
+        <form method="post" action="{% url 'trip_create' %}">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Дата</label>
+                    <input type="date" name="date" class="form-control" required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small text-muted">Что сделано</label>
+                    <textarea name="description" class="form-control" rows="2" required placeholder="Опишите что было сделано..."></textarea>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">
+                        Киоски 
+                        <a href="#" onclick="document.getElementById('deviceList').classList.toggle('d-none');return false;" style="font-size:0.7rem;">
+                            (выбрать из списка)
+                        </a>
+                        <span class="text-muted" style="font-size:0.6rem;" id="selectedDevicesLabel"></span>
+                    </label>
+                    <div class="device-select d-none" id="deviceList">
+                        <div class="row">
+                            {% for d in devices %}
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input device-opt" type="checkbox" name="device_ids" value="{{ d.id }}" id="dev{{ d.id }}" onchange="updateSelectedLabel()">
+                                    <label class="form-check-label" for="dev{{ d.id }}">{{ d.hostname }}</label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-plus-lg"></i> Добавить</button>
+        </form>
+    </div>
+</div>
+
+<!-- Список поездок -->
+<div class="card trip-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-check"></i> История поездок</span>
+        <a href="{% url 'export_trips' %}" class="btn btn-success btn-sm">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Что сделано</th>
+                    <th>Киоски</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for t in trips %}
+                <tr>
+                    <td style="white-space:nowrap;">{{ t.date|date:"d.m.Y" }}</td>
+                    <td>{{ t.description }}</td>
+                    <td>
+                        {% for d in t.devices.all %}
+                            <span class="badge-device">{{ d.hostname }}</span>
+                        {% empty %}
+                            <span class="text-muted">—</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <form method="post" action="{% url 'trip_delete' t.pk %}" onsubmit="return confirm('Удалить?')">
+                            {% csrf_token %}
+                            <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="4" class="text-center py-4 text-muted">Нет поездок</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function updateSelectedLabel() {
+    var selected = document.querySelectorAll('.device-opt:checked');
+    var names = [];
+    selected.forEach(function(cb) {
+        names.push(cb.parentElement.querySelector('label').textContent);
+    });
+    var label = document.getElementById('selectedDevicesLabel');
+    if (names.length > 0) {
+        label.textContent = 'Выбрано: ' + names.join(', ');
+    } else {
+        label.textContent = '';
+    }
+}
+</script>
+{% endblock %}

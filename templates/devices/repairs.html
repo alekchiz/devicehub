@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Форма создания заявки -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-plus-circle"></i> Новая заявка на ремонт
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'repair_create' %}">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Киоск</label>
+                    <select name="device_id" class="form-select" required>
+                        <option value="">Выберите киоск...</option>
+                        {% for d in devices %}
+                            <option value="{{ d.id }}">{{ d.hostname }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small text-muted">Проблема</label>
+                    <input type="text" name="problem" class="form-control" placeholder="Опишите проблему" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-lg"></i> Создать заявку
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Список ремонтов -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history"></i> История ремонтов</span>
+        <a href="{% url 'export_repairs' %}" class="btn btn-success btn-sm">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Киоск</th>
+                        <th>Проблема</th>
+                        <th>Описание ремонта</th>
+                        <th>Статус</th>
+                        <th>Создана</th>
+                        <th>В ремонте с</th>
+                        <th>Готов с</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for r in repairs %}
+                    <tr>
+                        <td><strong>{{ r.device.hostname }}</strong></td>
+                        <td>{{ r.problem }}</td>
+                        <td>{{ r.repair_description|default:"—" }}</td>
+                        <td>
+                            {% if r.status == 'created' %}
+                                <span class="badge bg-secondary">Создан</span>
+                            {% elif r.status == 'in_progress' %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-tools"></i> В ремонте</span>
+                            {% elif r.status == 'ready' %}
+                                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Готов</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small">{{ r.created_at|date:"d.m.Y H:i" }}</td>
+                        <td class="text-muted small">{{ r.in_progress_at|date:"d.m.Y H:i"|default:"—" }}</td>
+                        <td class="text-muted small">{{ r.ready_at|date:"d.m.Y H:i"|default:"—" }}</td>
+                        <td>
+                            {% if r.status == 'created' %}
+                            <form method="post" action="{% url 'repair_start' r.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-play-fill"></i> В ремонт
+                                </button>
+                            </form>
+                            {% elif r.status == 'in_progress' %}
+                            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#closeModal{{ r.pk }}">
+                                <i class="bi bi-check-lg"></i> Готов
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mt-2">Нет ремонтов</p>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Модальные окна ВНЕ таблицы -->
+{% for r in repairs %}
+    {% if r.status == 'in_progress' %}
+    <div class="modal fade" id="closeModal{{ r.pk }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'repair_ready' r.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title">Завершение ремонта</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Киоск:</strong> {{ r.device.hostname }}</p>
+                        <p><strong>Проблема:</strong> {{ r.problem }}</p>
+                        <div class="mb-3">
+                            <label class="form-label">Описание выполненного ремонта</label>
+                            <textarea name="repair_description" class="form-control" rows="3" required 
+                                      placeholder="Опишите, что было сделано"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg"></i> Завершить ремонт
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+{% endblock %}

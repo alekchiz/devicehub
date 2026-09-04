@@ -1,0 +1,90 @@
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="border rounded p-3">
+            <h6 class="text-muted mb-3"><i class="bi bi-pc-display"></i> Система</h6>
+            <table class="table table-sm table-borderless mb-0">
+                <tr><td class="text-muted">Hostname</td><td class="fw-bold">{{ device.hostname }}</td></tr>
+                <tr>
+                    <td class="text-muted">Статус</td>
+                    <td>
+                        {% if device.in_repair %}
+                            <span class="text-warning fw-bold"><i class="bi bi-tools"></i> В ремонте</span>
+                        {% elif device.is_online %}
+                            <span class="text-success fw-bold"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i> Онлайн</span>
+                        {% else %}
+                            <span class="text-danger fw-bold"><i class="bi bi-circle"></i> Оффлайн
+                            {% if device.offline_duration %}<br><small>({{ device.offline_duration }})</small>{% endif %}
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr><td class="text-muted">ОС</td><td>{{ device.os }}</td></tr>
+                <tr><td class="text-muted">Ядро</td><td>{{ device.kernel }}</td></tr>
+                <tr><td class="text-muted">Версия ПО</td><td>{{ device.software|default:"—" }}</td></tr>
+                <tr><td class="text-muted">SN</td><td>{{ device.sn }}</td></tr>
+                <tr><td class="text-muted">Аптайм</td><td>{{ device.uptime_formatted|default:device.uptime }}</td></tr>
+                <tr><td class="text-muted">Активность</td><td>{{ device.last_mqtt_message|date:"d.m.Y H:i:s"|default:"—" }}</td></tr>
+            </table>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="border rounded p-3">
+            <h6 class="text-muted mb-3"><i class="bi bi-wifi"></i> Сеть и доступ</h6>
+            <table class="table table-sm table-borderless mb-0">
+                <tr>
+                    <td class="text-muted">VPN IP</td>
+                    <td>
+                        <strong>{{ device.vpn_ip|default:"—" }}</strong>
+                        {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
+                            <br><a href="ssh://terminal@{{ device.vpn_ip }}" class="btn btn-outline-success btn-sm mt-1"><i class="bi bi-terminal"></i> SSH</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-muted">AnyDesk</td>
+                    <td>{{ device.anydesk|default:"—" }}</td>
+                </tr>
+                <tr><td class="text-muted">Сеть</td><td>{{ device.network_speed|default:"—" }}</td></tr>
+                <tr><td class="text-muted">x11vnc</td><td>{{ device.x11vnc }}</td></tr>
+            </table>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="border rounded p-3">
+            <h6 class="text-muted mb-3"><i class="bi bi-speedometer2"></i> Ресурсы</h6>
+            <table class="table table-sm table-borderless mb-0">
+                <tr><td class="text-muted">CPU</td><td>{% if device.cpu_load %}{{ device.cpu_load }}%{% else %}—{% endif %}</td></tr>
+                <tr><td class="text-muted">RAM</td><td>{% if device.memory_percent %}{{ device.memory_percent }}%{% else %}—{% endif %}</td></tr>
+                <tr><td class="text-muted">Диск</td><td>{% if device.hdd_percent %}{{ device.hdd_percent }}% ({{ device.hdd|floatformat:1 }}/{{ device.hdd_total|floatformat:1 }} ГБ){% else %}—{% endif %}</td></tr>
+                <tr><td class="text-muted">Температура</td><td>{{ device.temperature|default:"—" }}</td></tr>
+            </table>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="border rounded p-3">
+            <h6 class="text-muted mb-3"><i class="bi bi-droplet"></i> Оборудование</h6>
+            <table class="table table-sm table-borderless mb-0">
+                <tr><td class="text-muted">Алкотестер</td><td>{{ device.alco|default:"—" }}</td></tr>
+                <tr><td class="text-muted">Тонометр</td><td>{{ device.tonometer|default:"—" }}</td></tr>
+            </table>
+        </div>
+        <div class="border rounded p-3 mt-3">
+            <h6 class="text-muted mb-3"><i class="bi bi-people"></i> Владелец</h6>
+            <table class="table table-sm table-borderless mb-0">
+                <tr><td class="text-muted">Владелец</td><td>{{ device.owner.name|default:"—" }}</td></tr>
+                <tr><td class="text-muted">Объект</td><td>{{ device.client.name|default:"—" }}</td></tr>
+                <tr><td class="text-muted">Локация</td><td>{{ device.location.name|default:"—" }}</td></tr>
+                <tr><td class="text-muted">Контакт</td><td>{{ device.contact.name|default:"—" }}{% if device.contact.phone %}<br><small>{{ device.contact.phone }}</small>{% endif %}</td></tr>
+            </table>
+        </div>
+    </div>
+    
+    <div class="col-12 text-center mt-2">
+        <a href="{% url 'device_detail_page' device.pk %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-arrow-right"></i> Полная информация
+        </a>
+    </div>
+</div>

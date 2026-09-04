@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-pencil"></i> Редактирование заявки #{{ ticket.id }}
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Киоск</label>
+                        <input type="text" class="form-control" value="{{ ticket.device.hostname }}" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Проблема</label>
+                        <textarea name="problem" class="form-control" rows="3" required>{{ ticket.problem }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ФИО для связи</label>
+                        <input type="text" name="contact_name" class="form-control" value="{{ ticket.contact_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Телефон для связи</label>
+                        <input type="text" name="contact_phone" class="form-control" value="{{ ticket.contact_phone }}">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Сохранить
+                        </button>
+                        <a href="{% url 'tickets_list' %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

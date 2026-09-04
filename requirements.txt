@@ -1,0 +1,8 @@
+Django>=5.0
+paho-mqtt
+psycopg2-binary
+openpyxl
+python-telegram-bot
+asgiref
+python-dotenv
+gunicorn

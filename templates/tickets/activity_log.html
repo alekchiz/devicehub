@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1><i class="bi bi-clock-history"></i> История действий</h1>
+    <a href="{% url 'tickets_list' %}" class="btn btn-outline-secondary">← К заявкам</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Время</th>
+                    <th>Пользователь</th>
+                    <th>Действие</th>
+                    <th>Описание</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for log in logs %}
+                <tr>
+                    <td><small>{{ log.created_at|date:"d.m.Y H:i" }}</small></td>
+                    <td>{{ log.user.username|default:"Система" }}</td>
+                    <td>
+                        {% if log.action == 'create' %}
+                            <span class="badge bg-success">Создание</span>
+                        {% elif log.action == 'update' %}
+                            <span class="badge bg-info">Изменение</span>
+                        {% elif log.action == 'status_change' %}
+                            <span class="badge bg-warning">Смена статуса</span>
+                        {% elif log.action == 'assign' %}
+                            <span class="badge bg-primary">Назначение</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.description }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="4" class="text-muted text-center py-4">Логов пока нет</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Форма создания заявки -->
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-plus-circle"></i> Новая заявка
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'ticket_create' %}">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Киоск</label>
+                    <select name="device_id" class="form-select" required>
+                        <option value="">Выберите...</option>
+                        {% for d in devices %}
+                            <option value="{{ d.id }}">{{ d.hostname }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Проблема</label>
+                    <input type="text" name="problem" class="form-control" placeholder="Опишите проблему" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">ФИО</label>
+                    <input type="text" name="contact_name" class="form-control" placeholder="Контактное лицо">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Телефон</label>
+                    <input type="text" name="contact_phone" class="form-control" placeholder="+7...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-lg"></i> Создать
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Поиск -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-10">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="Поиск по Киоск или проблеме..." value="{{ request.GET.q }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Искать
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Список заявок -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-ticket-detailed"></i> Заявки</span>
+        <a href="{% url 'export_tickets' %}" class="btn btn-success btn-sm">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Киоск</th>
+                        <th>Проблема</th>
+                        <th>Контакты</th>
+                        <th>Статус</th>
+                        <th>Назначен</th>
+                        <th>Создана</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for t in tickets %}
+                    <tr>
+                        <td><strong>#{{ t.id }}</strong></td>
+                        <td>{{ t.device.hostname }}</td>
+                        <td>{{ t.problem|truncatechars:30 }}</td>
+                        <td><small>{{ t.contact_name }}<br>{{ t.contact_phone }}</small></td>
+                        <td>
+                            {% if t.status == 'created' %}
+                                <span class="badge bg-secondary">Создана</span>
+                            {% elif t.status == 'in_progress' %}
+                                <span class="badge bg-warning text-dark">В работе</span>
+                            {% elif t.status == 'completed' %}
+                                <span class="badge bg-info">Выполнена</span>
+                            {% elif t.status == 'closed' %}
+                                <span class="badge bg-success">Закрыта</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ t.assigned_to.username|default:"—" }}</td>
+                        <td><small>{{ t.created_at|date:"d.m H:i" }}</small></td>
+                        <td>
+                            {% if t.created_by == user or user.profile.role == 'admin' %}
+                                {% if t.status == 'created' or t.status == 'in_progress' %}
+                                <a href="{% url 'ticket_edit' t.pk %}" class="btn btn-outline-secondary btn-sm" title="Редактировать">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                            
+                            {% if user.profile.role == 'admin' and t.status == 'created' %}
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#assignModal{{ t.pk }}">
+                                Назначить
+                            </button>
+                            {% endif %}
+                            
+                            {% if t.assigned_to == user or user.profile.role == 'admin' %}
+                                {% if t.status == 'in_progress' %}
+                                <form method="post" action="{% url 'ticket_change_status' t.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="status" value="completed">
+                                    <button class="btn btn-info btn-sm">Выполнена</button>
+                                </form>
+                                {% elif t.status == 'completed' %}
+                                <form method="post" action="{% url 'ticket_change_status' t.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="status" value="closed">
+                                    <button class="btn btn-success btn-sm">Закрыть</button>
+                                </form>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="8" class="text-center py-4 text-muted">Нет заявок</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Модалки назначения -->
+{% for t in tickets %}
+    {% if user.profile.role == 'admin' and t.status == 'created' %}
+    <div class="modal fade" id="assignModal{{ t.pk }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'ticket_assign' t.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5>Назначить техника</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Заявка #{{ t.id }}</strong></p>
+                        <p>{{ t.problem }}</p>
+                        <select name="user_id" class="form-select" required>
+                            <option value="">Выберите техника...</option>
+                            {% for tech in technicians %}
+                                <option value="{{ tech.id }}">{{ tech.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary">Назначить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+{% endblock %}

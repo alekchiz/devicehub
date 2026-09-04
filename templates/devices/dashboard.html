@@ -1,0 +1,496 @@
+{% extends 'base.html' %}{% load devices_extras %}
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="container-fluid px-0">
+
+<!-- Статистика -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-sm-6 col-md-3">
+        <div class="stat-card">
+            <div class="card-body d-flex align-items-center p-3">
+                <div class="stat-icon total me-3"><i class="bi bi-cpu"></i></div>
+                <div>
+                    <div class="stat-value" id="statTotal">{{ total_count }}</div>
+                    <div class="stat-label">Киосков</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-6 col-md-3">
+        <div class="stat-card">
+            <div class="card-body d-flex align-items-center p-3">
+                <div class="stat-icon online me-3"><i class="bi bi-circle-fill"></i></div>
+                <div>
+                    <div class="stat-value online" id="statOnline">{{ online_count }}</div>
+                    <div class="stat-label">Онлайн</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-6 col-md-3">
+        <div class="stat-card">
+            <div class="card-body d-flex align-items-center p-3">
+                <div class="stat-icon offline me-3"><i class="bi bi-circle"></i></div>
+                <div>
+                    <div class="stat-value offline" id="statOffline">{{ offline_count }}</div>
+                    <div class="stat-label">Оффлайн</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-6 col-md-3">
+        <div class="stat-card">
+            <div class="card-body d-flex align-items-center p-3">
+                <div class="stat-icon repair me-3"><i class="bi bi-tools"></i></div>
+                <div>
+                    <div class="stat-value repair" id="statRepair">{{ repair_count }}</div>
+                    <div class="stat-label">В ремонте</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Поиск и статус -->
+<div class="filter-card card mb-3">
+    <div class="card-body p-3">
+        <form method="get" class="d-flex flex-wrap align-items-center gap-2" id="filterForm">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-search text-muted"></i>
+                <input type="text" name="q" id="searchQ" class="form-control"
+                       style="max-width:240px;border-radius:10px;" placeholder="Номер киоска..."
+                       value="{{ request.GET.q }}" autocomplete="off">
+                {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            </div>
+            <div class="d-flex gap-1">
+                <a href="{{ status_chips.all }}" class="status-chip {% if status_filter == '' %}active{% endif %}">
+                    <span class="c-dot all"></span>Все
+                </a>
+                <a href="{{ status_chips.online }}" class="status-chip {% if status_filter == 'online' %}active{% endif %}">
+                    <span class="c-dot online"></span>Онлайн
+                </a>
+                <a href="{{ status_chips.offline }}" class="status-chip {% if status_filter == 'offline' %}active{% endif %}">
+                    <span class="c-dot offline"></span>Оффлайн
+                </a>
+                <a href="{{ status_chips.repair }}" class="status-chip {% if status_filter == 'repair' %}active{% endif %}">
+                    <span class="c-dot repair"></span>В ремонте
+                </a>
+            </div>
+            <div class="ms-auto d-flex align-items-center gap-2">
+                {% if search_mode %}
+                <span class="muted"><i class="bi bi-search"></i> Найдено: <b>{{ result_count }}</b></span>
+                {% else %}
+                <span class="muted"><i class="bi bi-hdd"></i> Всего: <b>{{ result_count }}</b></span>
+                {% endif %}
+                {% if filter_active %}
+                <a href="{{ reset_url }}" class="btn-soft btn-outline-secondary btn-sm"><i class="bi bi-x-circle"></i> Сбросить</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Отчёты -->
+<div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+    <label class="section-title mb-0">Отчёты:</label>
+    <a href="{% url 'export_devices' %}" class="btn btn-soft btn-success btn-sm"><i class="bi bi-download"></i> Киоски</a>
+    <a href="{% url 'export_devices_history' %}" class="btn btn-soft btn-info btn-sm"><i class="bi bi-clock-history"></i> История</a>
+    <a href="{% url 'export_devices_stats' %}" class="btn btn-soft btn-warning btn-sm"><i class="bi bi-graph-up"></i> Статистика</a>
+    <a href="{% url 'export_alco_report' %}" class="btn btn-soft btn-danger btn-sm"><i class="bi bi-droplet"></i> Алко</a>
+    <a href="{% url 'export_tonometer_report' %}" class="btn btn-soft btn-secondary btn-sm"><i class="bi bi-heart-pulse"></i> Тоно</a>
+    <a href="{% url 'export_verifications' %}" class="btn btn-soft btn-info btn-sm"><i class="bi bi-shield-check"></i> Поверки</a>
+    <a href="{% url 'export_med_devices' %}" class="btn btn-soft btn-primary btn-sm"><i class="bi bi-heart-pulse"></i> Мед.средства</a>
+</div>
+
+<!-- Массовые действия -->
+{% if user.profile.role == 'admin' %}
+<div class="filter-card card mb-3" id="bulkPanel" style="display:none;">
+    <div class="card-body p-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <span class="fw-bold" style="font-size:0.8rem;">Выбрано: <span id="selectedCount">0</span></span>
+        <div>
+            <button class="btn btn-soft btn-outline-danger btn-sm me-2" onclick="bulkAction('reboot')"><i class="bi bi-power"></i> Reboot</button>
+            <button class="btn btn-soft btn-outline-warning btn-sm me-2" onclick="bulkAction('stop')"><i class="bi bi-stop-circle"></i> Стоп</button>
+            <button class="btn btn-soft btn-outline-primary btn-sm" onclick="bulkAction('start')"><i class="bi bi-play-circle"></i> Старт</button>
+        </div>
+        <button class="btn btn-sm btn-soft btn-outline-secondary" onclick="toggleBulkPanel()">×</button>
+    </div>
+</div>
+{% endif %}
+
+<form id="bulkForm" method="post" action="{% url 'bulk_action' %}">
+{% csrf_token %}
+<div class="page-head accent-{{ page_status }}" id="pageHead">
+    <h1>
+        <i class="bi bi-grid"></i> Киоски
+        <span class="live-dot" id="liveDot" title="Обновляется в реальном времени"></span>
+    </h1>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="status-pill {{ page_status }}" id="statusPill">
+            {% if page_status == 'ok' %}● Все онлайн
+            {% elif page_status == 'warn' %}● Есть офлайн
+            {% else %}● В ремонте{% endif %}
+        </span>
+        <span class="muted" id="pageMuted">
+            <i class="bi bi-hdd"></i>
+            всего <b id="headTotal">{{ total_count }}</b>
+            · онлайн <b id="headOnline">{{ online_count }}</b>
+            · офлайн <b id="headOffline">{{ offline_count }}</b>
+            {% if repair_count %}· в ремонте <b id="headRepair">{{ repair_count }}</b>{% endif %}
+            {% if page_obj and page_obj.paginator.num_pages > 1 %}· стр. {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}{% endif %}
+        </span>
+    </div>
+</div>
+<div class="row g-3">
+{% for device in devices %}
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2">
+        <div class="device-card card h-100 {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}" data-device-id="{{ device.pk }}">
+            <button type="button" class="device-expand" onclick="event.stopPropagation();toggleDeviceMetrics({{ device.pk }})"
+                    title="Детальные метрики" aria-label="Детальные метрики">
+                <i class="bi bi-graph-up" id="expIco-{{ device.pk }}"></i>
+            </button>
+            <div class="card-body" onclick="window.location='{% url 'device_detail_page' device.pk %}'">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="hostname text-truncate" style="max-width:70%;">{{ device.hostname }}</span>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="badge-soft {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}" id="badge-{{ device.pk }}">
+                            {% if device.in_repair %}Ремонт{% else %}●{% endif %}
+                        </span>
+                        {% if user.profile.role == 'admin' and device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
+                        <input type="checkbox" name="device_ids" value="{{ device.pk }}" class="form-check-input device-check" onclick="event.stopPropagation();updateBulkPanel()" style="width:12px;height:12px;margin:0;">
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-1">
+                    <a href="ssh://terminal@{{ device.vpn_ip }}" class="vpn-link" onclick="event.stopPropagation();" title="Подключиться по SSH">
+                        <i class="bi bi-shield-check"></i> VPN: {{ device.vpn_ip|default:"—" }}
+                    </a>
+                </div>
+                {% if device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
+                <div class="mb-1">
+                    <a href="anydesk:{{ device.anydesk }}" class="ad-link" onclick="event.stopPropagation();" title="Подключиться по AnyDesk">
+                        <i class="bi bi-display"></i> AD: {{ device.anydesk }}
+                    </a>
+                </div>
+                {% endif %}
+                {% if device.client or device.owner or device.location %}
+                <div class="client-chip">
+                    {% if device.client %}
+                    <span class="chip" title="Объект"><i class="bi bi-building"></i>{{ device.client.name }}</span>
+                    {% endif %}
+                    {% if device.owner %}
+                    <span class="chip" title="Владелец"><i class="bi bi-person"></i>{{ device.owner.name }}</span>
+                    {% endif %}
+                    {% if device.location %}
+                    <span class="chip" title="Локация"><i class="bi bi-geo-alt"></i>{{ device.location.name }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <div class="med-indicators">
+                    <span class="mi {{ device.alco_ok|yesno:'ok,err' }}" title="Алкотестер: {{ device.alco_ok|yesno:'подключён,проблема' }}"><i class="bi bi-droplet-half"></i></span>
+                    <span class="mi {{ device.tono_ok|yesno:'ok,err' }}" title="Тонометр: {{ device.tono_ok|yesno:'подключён,проблема' }}"><i class="bi bi-heart-pulse"></i></span>
+                    <span class="mi {{ device.temp_ok|yesno:'ok,err' }}" title="Термометр: {{ device.temp_ok|yesno:'данные есть,нет' }}"><i class="bi bi-thermometer-half"></i></span>
+                </div>
+                {% with vs=verif_states|get_item:device.pk %}
+                {% if vs %}
+                <div class="med-expiry {{ vs.0 }}">
+                    <i class="bi bi-shield-check"></i>
+                    {% if vs.0 == 'expired' %}Поверка истекла
+                    {% elif vs.0 == 'soon' %}Поверка скоро истекает
+                    {% else %}Поверка действует{% endif %}
+                    &middot; до {{ vs.1|date:"d.m.Y" }}
+                </div>
+                {% endif %}
+                {% endwith %}
+                {% if device.offline_duration %}
+                <div class="meta" style="color:#dc2626;" id="offline-{{ device.pk }}"><i class="bi bi-clock"></i> {{ device.offline_duration }}</div>
+                {% endif %}
+                {% if device.broker %}
+                <div class="meta" style="font-size:0.5rem;">📡 {{ device.broker }}</div>
+                {% endif %}
+
+                {% if device.cpu_load is not None or device.hdd_percent is not None or device.memory_percent is not None %}
+                <div class="device-metrics">
+                    {% if device.cpu_load is not None %}
+                    <div class="metric" title="CPU: {{ device.cpu_load|floatformat:"0" }}%">
+                        <i class="metric-icon bi bi-cpu"></i>
+                        <div class="metric-track">
+                            <div class="metric-fill {% if device.cpu_load < 40 %}is-good{% elif device.cpu_load < 70 %}is-warn{% else %}is-bad{% endif %}" id="mCpu-{{ device.pk }}" style="width:{% widthratio device.cpu_load 100 100 %}%;"></div>
+                        </div>
+                        <span class="metric-value" id="mCpuVal-{{ device.pk }}">{{ device.cpu_load|floatformat:"0" }}%</span>
+                    </div>
+                    {% endif %}
+                    {% if device.hdd_percent is not None %}
+                    <div class="metric" title="Диск: {{ device.hdd_percent|floatformat:"0" }}%">
+                        <i class="metric-icon bi bi-hdd"></i>
+                        <div class="metric-track">
+                            <div class="metric-fill {% if device.hdd_percent < 70 %}is-good{% elif device.hdd_percent < 85 %}is-warn{% else %}is-bad{% endif %}" id="mHdd-{{ device.pk }}" style="width:{% widthratio device.hdd_percent 100 100 %}%;"></div>
+                        </div>
+                        <span class="metric-value" id="mHddVal-{{ device.pk }}">{{ device.hdd_percent|floatformat:"0" }}%</span>
+                    </div>
+                    {% endif %}
+                    {% if device.memory_percent is not None %}
+                    <div class="metric" title="RAM: {{ device.memory_percent|floatformat:"0" }}%">
+                        <i class="metric-icon bi bi-memory"></i>
+                        <div class="metric-track">
+                            <div class="metric-fill {% if device.memory_percent < 70 %}is-good{% elif device.memory_percent < 85 %}is-warn{% else %}is-bad{% endif %}" id="mRam-{{ device.pk }}" style="width:{% widthratio device.memory_percent 100 100 %}%;"></div>
+                        </div>
+                        <span class="metric-value" id="mRamVal-{{ device.pk }}">{{ device.memory_percent|floatformat:"0" }}%</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if device.in_repair and device.pk in repair_map %}
+                {% with rp=repair_map|get_item:device.pk %}
+                <div class="repair-progress">
+                    <div class="rp-head">
+                        <span><i class="bi bi-tools"></i> {{ rp.status }}</span>
+                        <span>{{ rp.days }} дн.</span>
+                    </div>
+                    <div class="rp-track"><div class="rp-fill" style="width:{{ rp.percent }}%;"></div></div>
+                </div>
+                {% endwith %}
+                {% endif %}
+
+                <div class="device-detail" id="detail-{{ device.pk }}">
+                    {% if device.temperature %}
+                    <div class="row-line"><span class="k">Температура</span><span class="v">{{ device.temperature }}</span></div>
+                    {% endif %}
+                    {% if device.uptime_formatted %}
+                    <div class="row-line"><span class="k">Аптайм</span><span class="v">{{ device.uptime_formatted }}</span></div>
+                    {% endif %}
+                    {% if device.software %}
+                    <div class="row-line"><span class="k">ПО</span><span class="v">{{ device.software }}</span></div>
+                    {% endif %}
+                    {% if device.kernel %}
+                    <div class="row-line"><span class="k">Ядро</span><span class="v">{{ device.kernel }}</span></div>
+                    {% endif %}
+                    {% if device.hdd is not None %}
+                    <div class="row-line"><span class="k">Диск свободно</span><span class="v">{{ device.hdd|floatformat:"0" }} / {{ device.hdd_total|floatformat:"0" }} ГБ</span></div>
+                    {% endif %}
+                    {% if device.memory_used is not None %}
+                    <div class="row-line"><span class="k">RAM</span><span class="v">{{ device.memory_used|floatformat:"0" }} / {{ device.memory_total|floatformat:"0" }} ГБ</span></div>
+                    {% endif %}
+                    {% if device.last_mqtt_message %}
+                    <div class="row-line"><span class="k">Послед. MQTT</span><span class="v">{{ device.last_mqtt_message|date:"d.m.Y H:i" }}</span></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% empty %}
+    <div class="col-12">
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <p class="mt-2">Нет киосков</p>
+        </div>
+    </div>
+{% endfor %}
+</div>
+</form>
+
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav aria-label="Пагинация" class="mt-3 d-flex justify-content-center">
+    <ul class="pagination pagination-sm">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ base_qs }}" aria-label="Назад">‹</a>
+        </li>
+        {% endif %}
+        {% for p in page_obj.paginator.get_elided_page_range %}
+            {% if p == page_obj.paginator.ELLIPSIS %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% else %}
+            <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+                <a class="page-link" href="?page={{ p }}{{ base_qs }}">{{ p }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{{ base_qs }}" aria-label="Вперёд">›</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+</div>
+
+<script>
+var offlineNotif = { count: -1, since: 0 };
+
+function debounce(fn, ms) {
+    var t;
+    return function () {
+        clearTimeout(t);
+        t = setTimeout(fn, ms);
+    };
+}
+
+function toggleDeviceMetrics(id) {
+    var card = document.querySelector('.device-card[data-device-id="' + id + '"]');
+    if (!card) return;
+    card.classList.toggle('open');
+    var ico = document.getElementById('expIco-' + id);
+    if (ico) ico.className = card.classList.contains('open') ? 'bi bi-graph-down' : 'bi bi-graph-up';
+}
+
+function barColor(v, cpu) {
+    if (cpu) return v < 40 ? 'is-good' : (v < 70 ? 'is-warn' : 'is-bad');
+    return v < 70 ? 'is-good' : (v < 85 ? 'is-warn' : 'is-bad');
+}
+
+function applyStatus(payload) {
+    var head = document.getElementById('pageHead');
+    if (head) head.className = 'page-head accent-' + payload.page_status;
+
+    function setTxt(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+    setTxt('statTotal', payload.total);
+    setTxt('statOnline', payload.online);
+    setTxt('statOffline', payload.offline);
+    setTxt('statRepair', payload.repair);
+    setTxt('headTotal', payload.total);
+    setTxt('headOnline', payload.online);
+    setTxt('headOffline', payload.offline);
+
+    // Уведомление во вкладке при появлении новых оффлайн-киосков.
+    if (payload.offline > offlineNotif.count) {
+        document.title = '⚠ ' + payload.offline + ' оффлайн — МедКиоск';
+        offlineNotif.since = Date.now();
+    } else if (payload.offline === 0) {
+        document.title = 'МедКиоск';
+        offlineNotif.since = 0;
+    } else if (offlineNotif.since && Date.now() - offlineNotif.since > 5000 &&
+               document.title.indexOf('оффлайн') !== -1) {
+        document.title = 'МедКиоск';
+        offlineNotif.since = 0;
+    }
+    offlineNotif.count = payload.offline;
+
+    var pill = document.getElementById('statusPill');
+    if (pill) {
+        pill.className = 'status-pill ' + payload.page_status;
+        pill.innerHTML = payload.page_status === 'ok' ? '● Все онлайн' :
+            (payload.page_status === 'warn' ? '● Есть офлайн' : '● В ремонте');
+    }
+
+    Object.keys(payload.devices).forEach(function(id) {
+        var card = document.querySelector('.device-card[data-device-id="' + id + '"]');
+        if (!card) return;
+        var d = payload.devices[id];
+
+        card.className = 'device-card card h-100 ' + (d.in_repair ? 'repair' : (d.online ? 'online' : 'offline'));
+
+        var badge = document.getElementById('badge-' + id);
+        if (badge) {
+            badge.className = 'badge-soft ' + (d.in_repair ? 'repair' : (d.online ? 'online' : 'offline'));
+            badge.textContent = d.in_repair ? 'Ремонт' : '●';
+        }
+
+        var off = document.getElementById('offline-' + id);
+        if (off) {
+            if (d.offline_duration) {
+                off.style.display = '';
+                off.innerHTML = '<i class="bi bi-clock"></i> ' + d.offline_duration;
+            } else {
+                off.style.display = 'none';
+            }
+        }
+
+        function applyBar(fillId, valId, val, cpu) {
+            var fill = document.getElementById(fillId);
+            if (!fill || val === null || val === undefined) return;
+            fill.style.width = Math.max(0, Math.min(100, val)).toFixed(0) + '%';
+            fill.className = 'metric-fill ' + barColor(val, cpu);
+            var valEl = document.getElementById(valId);
+            if (valEl) valEl.textContent = Math.round(val) + '%';
+        }
+        applyBar('mCpu-' + id, 'mCpuVal-' + id, d.cpu, true);
+        applyBar('mHdd-' + id, 'mHddVal-' + id, d.hdd, false);
+        applyBar('mRam-' + id, 'mRamVal-' + id, d.ram, false);
+    });
+}
+
+function refreshStatus() {
+    fetch('{% url 'device_status_feed' %}')
+        .then(function (r) { return r.json(); })
+        .then(applyStatus)
+        .catch(function (e) { console.warn('status poll failed', e); });
+}
+
+refreshStatus();
+setInterval(refreshStatus, 5000);
+
+// Восстановление фокуса/курсора и прокрутки после автоприменения поиска.
+function restoreUI() {
+    try {
+        var raw = sessionStorage.getItem('dh-ui');
+        if (!raw) return;
+        sessionStorage.removeItem('dh-ui');
+        var ui = JSON.parse(raw);
+        if (ui.y != null) window.scrollTo(0, ui.y);
+        if (ui.focus === 'searchQ') {
+            var q = document.getElementById('searchQ');
+            if (q) {
+                q.focus();
+                var caret = ui.caret != null ? ui.caret : (q.value || '').length;
+                try { q.setSelectionRange(caret, caret); } catch (e) {}
+            }
+        }
+    } catch (e) {}
+}
+
+// Поиск с debounce: авто-применение фильтра после паузы во вводе.
+var searchInput = document.getElementById('searchQ');
+var searchForm = document.getElementById('filterForm');
+if (searchInput && searchForm) {
+    restoreUI();
+    searchInput.addEventListener('input', debounce(function () {
+        var el = document.activeElement;
+        if (el && el.id === 'searchQ') {
+            try {
+                sessionStorage.setItem('dh-ui', JSON.stringify({
+                    focus: 'searchQ',
+                    caret: el.selectionStart,
+                    y: window.scrollY
+                }));
+            } catch (e) {}
+        }
+        searchForm.submit();
+    }, 700));
+}
+</script>
+
+{% if user.profile.role == 'admin' %}
+<script>
+function updateBulkPanel() {
+    var count = document.querySelectorAll('.device-check:checked').length;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('bulkPanel').style.display = count > 0 ? 'block' : 'none';
+}
+function toggleBulkPanel() {
+    document.getElementById('bulkPanel').style.display = 'none';
+    document.querySelectorAll('.device-check').forEach(c => c.checked = false);
+}
+function bulkAction(action) {
+    var form = document.getElementById('bulkForm');
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'action';
+    input.value = action;
+    form.appendChild(input);
+    if(confirm('Выполнить '+action+'?')) form.submit();
+}
+</script>
+{% endif %}
+{% endblock %}
