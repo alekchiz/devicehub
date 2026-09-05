@@ -35,7 +35,7 @@ def on_day_message(client, userdata, msg):
         payload = json.loads(msg.payload.decode('utf-8'))
         day_date = extract_day_date(msg.topic)
         processed = ingest_day_snapshot(payload, day_date)
-        print(f"📊 Осмотры ПАК за {day_date}: {processed} киосков")
+        print(f"📊 EXAM_DAY {day_date}: {processed} paks")
     except Exception as e:
         print(f"❌ Day MQTT error: {e}")
 
@@ -55,7 +55,7 @@ def on_message(client, userdata, msg):
         day_date = extract_day_date(msg.topic)
         if day_date:
             processed = ingest_day_snapshot(payload, day_date)
-            print(f"📊 Осмотры ПАК за {day_date}: {processed} киосков")
+            print(f"📊 EXAM_DAY {day_date}: {processed} paks")
             return
 
         host = payload.get('host') or payload.get('hostname') or 'unknown'
