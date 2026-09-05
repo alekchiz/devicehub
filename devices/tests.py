@@ -566,10 +566,16 @@ class ImportExamsTests(TestCase):
         self.assertIn('/admin/devices/device/import/', resp.url)
 
     def test_dashboard_shows_exam_count(self):
+        from devices.models import DailyExam
         self.client.force_login(_technician())
-        Device.objects.all().update(exam_count=512)
+        DailyExam.objects.create(
+            device=Device.objects.get(hostname='123'),
+            date=timezone.localdate(),
+            exams=512,
+        )
         resp = self.client.get(reverse('dashboard'))
-        self.assertContains(resp, 'Осмотры: 512')
+        self.assertContains(resp, 'всего 512')
+        self.assertContains(resp, 'за день 512')
 
 
 class AdminPagesTests(TestCase):
@@ -645,11 +651,11 @@ class ExamIngestTests(TestCase):
         count = ingest_day_snapshot(payload, 'pak/day/2026-09-05')
         self.assertEqual(count, 1)
         self.device.refresh_from_db()
-        self.assertEqual(self.device.exam_count, 12)
+        self.assertIsNone(self.device.exam_count)
         self.assertIsNotNone(self.device.client)
         self.assertEqual(self.device.client.name, 'РТК - ДВ')
         self.assertEqual(self.device.location.name, 'с. Хороль, ул. Ленинская, 50 б')
-        daily = self.device.daily_exams.get(date=timezone.localdate())
+        daily = self.device.daily_exams.get()
         self.assertEqual(daily.exams, 12)
         self.assertEqual(daily.cancelled, 1)
 
@@ -659,7 +665,8 @@ class ExamIngestTests(TestCase):
         count = ingest_day_snapshot(payload)
         self.assertEqual(count, 1)
         dev = Device.objects.get(hostname='99999')
-        self.assertEqual(dev.exam_count, 7)
+        self.assertIsNone(dev.exam_count)
+        self.assertEqual(dev.daily_exams.get().exams, 7)
 
     def test_ingest_ignores_bad_payload(self):
         from devices.exam_ingest import ingest_day_snapshot

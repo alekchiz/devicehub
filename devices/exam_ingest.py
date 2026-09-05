@@ -2,7 +2,6 @@
 import re
 from datetime import datetime
 
-from django.db.models import Max
 from django.utils import timezone
 
 from .models import Device, Client, Location, DailyExam
@@ -94,12 +93,6 @@ def ingest_day_snapshot(payload, topic_date=None):
             if device.location_id != location.pk:
                 device.location = location
                 update_fields.append('location')
-
-        max_day = device.daily_exams.aggregate(m=Max('date'))['m']
-        if max_day is None or day >= max_day:
-            if device.exam_count != exams:
-                device.exam_count = exams
-                update_fields.append('exam_count')
 
         if update_fields:
             device.save(update_fields=update_fields)

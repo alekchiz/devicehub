@@ -233,10 +233,12 @@
                 <div class="med-indicators">
                     <span class="mi {{ device.alco_ok|yesno:'ok,err' }}" title="Алкотестер: {{ device.alco_ok|yesno:'подключён,проблема' }}"><i class="bi bi-droplet-half"></i> Алко</span>
                     <span class="mi {{ device.tono_ok|yesno:'ok,err' }}" title="Тонометр: {{ device.tono_ok|yesno:'подключён,проблема' }}"><i class="bi bi-heart-pulse"></i> Тоно</span>
-                    {% if device.exam_count is not None %}
-                    <span class="mi-exams"><i class="bi bi-clipboard-check"></i> Осмотры: {{ device.exam_count }}</span>
-                    {% endif %}
                 </div>
+                {% with total_all=all_total|get_item:device.pk latest_day=today_exams|get_item:device.pk %}
+                {% if total_all or device.exam_count or latest_day %}
+                <div class="meta"><i class="bi bi-clipboard-check"></i> Осмотры: всего {% if total_all %}{{ total_all }}{% elif device.exam_count %}{{ device.exam_count }}{% else %}—{% endif %} · за день {% if latest_day %}{{ latest_day }}{% else %}—{% endif %}</div>
+                {% endif %}
+                {% endwith %}
                 {% with vs=verif_states|get_item:device.pk %}
                 {% if vs %}
                 <div class="med-expiry {{ vs.0 }}">

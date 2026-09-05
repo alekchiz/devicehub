@@ -3,8 +3,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
-from django.db.models import Q, Count
-from .models import Device, Owner, Client, Location, Repair, Verification, DeviceEvent
+from django.db.models import Q, Count, Sum
+from .models import Device, Owner, Client, Location, Repair, Verification, DeviceEvent, DailyExam
 from tickets.models import Ticket
 from shipments.models import Shipment
 from datetime import timedelta
@@ -258,6 +258,19 @@ def dashboard(request):
     shown_online = sum(1 for d in device_list if d.is_online and not d.in_repair)
     shown_offline = sum(1 for d in device_list if not d.is_online and not d.in_repair)
 
+    # Осмотры: сумма по всем дням («всего») и последний снимок («за день/сегодня»).
+    all_total = dict(
+        DailyExam.objects.values('device_id')
+        .annotate(total=Sum('exams'))
+        .values_list('device_id', 'total')
+    )
+    latest_map = {}
+    for pid, d, exams in DailyExam.objects.values_list('device_id', 'date', 'exams'):
+        cur = latest_map.get(pid)
+        if cur is None or d > cur[0]:
+            latest_map[pid] = (d, exams)
+    today_exams = {pid: ex for pid, (d, ex) in latest_map.items()}
+
     if repair_count:
         page_status = 'repair'
     elif offline_count:
@@ -298,6 +311,8 @@ def dashboard(request):
         'search_mode': search_mode,
         'med_ready': med_ready,
         'med_total': result_count,
+        'all_total': all_total,
+        'today_exams': today_exams,
         'verif_expired': v_expired,
         'verif_soon': v_soon,
         'problems_count': problems_count,
@@ -400,6 +415,7 @@ def device_detail_page(request, pk):
     events = device.events.all()[:10]
     verifications = device.verifications.all()[:10]
     daily_exams = device.daily_exams.all()[:10]
+    daily_total = device.daily_exams.aggregate(total=Sum('exams'))['total']
     
     context = {
         'device': device,
@@ -409,6 +425,7 @@ def device_detail_page(request, pk):
         'events': events,
         'verifications': verifications,
         'daily_exams': daily_exams,
+        'daily_total': daily_total,
     }
     return render(request, 'devices/device_detail_page.html', context)
 
