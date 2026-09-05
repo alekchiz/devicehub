@@ -98,6 +98,9 @@ MQTT_TOPIC = os.getenv('MQTT_TOPIC', '#')
 # Доступ по SSH к киоскам (используется в views.py)
 DEVICE_SSH_USER = os.getenv('DEVICE_SSH_USER', 'terminal')
 DEVICE_SSH_PASSWORD = os.getenv('DEVICE_SSH_PASSWORD', '')
+# Резервные SSH-пароли (через запятую): пробуются по очереди, если у киоска
+# не задан свой пароль и глобальный не подошёл.
+DEVICE_SSH_PASSWORDS = [p for p in os.getenv('DEVICE_SSH_PASSWORDS', '').split(',') if p.strip()]
 
 AUTH_PASSWORD_VALIDATORS = []
 

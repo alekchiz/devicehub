@@ -27,33 +27,154 @@ def build_qs(request, **overrides):
             qs[key] = value
     return '?' + qs.urlencode() if qs else ''
 
-def ssh_execute(vpn_ip, command):
-    result = subprocess.run(
-        ['/usr/bin/sshpass', '-p', settings.DEVICE_SSH_PASSWORD,
-         '/usr/bin/ssh',
-         '-o', 'ConnectTimeout=5',
-         '-o', 'StrictHostKeyChecking=no',
-         '-o', 'UserKnownHostsFile=/dev/null',
-         f'{settings.DEVICE_SSH_USER}@{vpn_ip}', command],
-        capture_output=True, text=True, timeout=15
-    )
-    return result
+class _SSHFailed:
+    """Заглушка результата при недоступности киоска (неверный пароль/нет сети)."""
+    returncode = 1
+    stdout = ''
+    stderr = 'SSH: не удалось подключиться (неверный пароль или киоск недоступен)'
 
-def ssh_reboot(vpn_ip):
-    try:
-        result = subprocess.run(
-            ['/usr/bin/sshpass', '-p', settings.DEVICE_SSH_PASSWORD,
-             '/usr/bin/ssh',
-             '-o', 'ConnectTimeout=3',
-             '-o', 'StrictHostKeyChecking=no',
-             '-o', 'UserKnownHostsFile=/dev/null',
-             f'{settings.DEVICE_SSH_USER}@{vpn_ip}',
-             f'echo {settings.DEVICE_SSH_PASSWORD} | sudo -S reboot'],
-            capture_output=True, text=True, timeout=10
+    def __init__(self, message=None):
+        if message:
+            self.stderr = message
+
+
+def _ssh_candidate_passwords(device=None):
+    """Пароли для подключения: свой у киоска, глобальный, затем резервные из настроек."""
+    seen, candidates = set(), []
+    pool = []
+    if device and getattr(device, 'ssh_password', None):
+        pool.append(device.ssh_password)
+    pool.append(settings.DEVICE_SSH_PASSWORD)
+    pool.extend(getattr(settings, 'DEVICE_SSH_PASSWORDS', []) or [])
+    for pwd in pool:
+        if pwd and pwd not in seen:
+            seen.add(pwd)
+            candidates.append(pwd)
+    return candidates
+
+
+def _ssh_run(vpn_ip, command, candidates, sudo_reboot=False):
+    """Пробует каждый пароль до первого успешного подключения."""
+    for pwd in candidates:
+        if sudo_reboot:
+            escaped = pwd.replace("'", "'\\''")
+            remote = "printf '%s\\n' '{pwd}' | sudo -S reboot".format(pwd=escaped)
+            args = ['/usr/bin/sshpass', '-p', pwd, '/usr/bin/ssh',
+                    '-o', 'ConnectTimeout=3', '-o', 'StrictHostKeyChecking=no',
+                    '-o', 'UserKnownHostsFile=/dev/null',
+                    f'{settings.DEVICE_SSH_USER}@{vpn_ip}', remote]
+            timeout = 10
+        else:
+            args = ['/usr/bin/sshpass', '-p', pwd, '/usr/bin/ssh',
+                    '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=no',
+                    '-o', 'UserKnownHostsFile=/dev/null',
+                    f'{settings.DEVICE_SSH_USER}@{vpn_ip}', command]
+            timeout = 15
+        try:
+            result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return _SSHFailed('SSH: таймаут подключения')
+        lower_err = result.stderr.lower()
+        auth_failed = (
+            result.returncode == 5 or
+            'permission denied' in lower_err or
+            'authentication' in lower_err or
+            ('denied.' in lower_err)
         )
-        return result
+        if not auth_failed:
+            return result
+    return _SSHFailed()
+
+
+def ssh_execute(device, command):
+    """Выполнить команду на киоске через SSH (пробует несколько паролей)."""
+    if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
+        return _SSHFailed('SSH: у киоска нет VPN IP')
+    return _ssh_run(device.vpn_ip, command, _ssh_candidate_passwords(device))
+
+
+def ssh_reboot(device):
+    """Перезагрузка киоска через sudo (пробует несколько паролей)."""
+    if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
+        return _SSHFailed('SSH: у киоска нет VPN IP')
+    return _ssh_run(device.vpn_ip, None, _ssh_candidate_passwords(device), sudo_reboot=True)
+
+
+def upload_file_to_device(device, uploaded_file, target_path):
+    """Копирует загруженный файл на киоск по SCP (первый рабочий пароль)."""
+    import os as _os
+    import tempfile
+
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            for chunk in uploaded_file.chunks():
+                tf.write(chunk)
+            tmp = tf.name
+
+        for pwd in _ssh_candidate_passwords(device):
+            if not pwd:
+                continue
+            result = subprocess.run(
+                ['/usr/bin/sshpass', '-p', pwd, '/usr/bin/scp',
+                 '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=no',
+                 '-o', 'UserKnownHostsFile=/dev/null',
+                 tmp, f'{settings.DEVICE_SSH_USER}@{device.vpn_ip}:{target_path}'],
+                capture_output=True, text=True, timeout=25
+            )
+            if result.returncode == 0:
+                return True, f'Файл загружен в {target_path}'
+            lower_err = result.stderr.lower()
+            if result.returncode != 5 and 'permission denied' not in lower_err:
+                return False, result.stderr.strip() or 'Ошибка копирования'
+        return False, 'Не удалось подключиться (проверьте SSH-пароль киоска)'
     except subprocess.TimeoutExpired:
-        return None
+        return False, 'Таймаут копирования'
+    finally:
+        if tmp and _os.path.exists(tmp):
+            _os.remove(tmp)
+
+
+def ssh_change_password(device, new_password):
+    """Меняет пароль пользователя terminal на киоске через sudo chpasswd.
+
+    Подключается любым рабочим паролем из списка (свой киоска / общий / резервные),
+    затем выставляет новый пароль. Новый пароль не должен быть пустым.
+    """
+    if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
+        return False, 'SSH: у киоска нет VPN IP'
+    if not new_password:
+        return False, 'Не указан новый пароль'
+
+    escaped_user = settings.DEVICE_SSH_USER.replace("'", "'\\''")
+    for current in _ssh_candidate_passwords(device):
+        escaped_cur = current.replace("'", "'\\''")
+        escaped_new = new_password.replace("'", "'\\''")
+        remote = ("printf '%s\\n' '{cur}' | sudo -S sh -c "
+                  "\"printf '%s\\n' '{user}:{new}' | chpasswd\"").format(
+                      cur=escaped_cur, user=escaped_user, new=escaped_new)
+        args = ['/usr/bin/sshpass', '-p', current, '/usr/bin/ssh',
+                '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=no',
+                '-o', 'UserKnownHostsFile=/dev/null',
+                f'{settings.DEVICE_SSH_USER}@{device.vpn_ip}', remote]
+        try:
+            result = subprocess.run(args, capture_output=True, text=True, timeout=20)
+        except subprocess.TimeoutExpired:
+            return False, 'SSH: таймаут подключения'
+
+        lower_err = result.stderr.lower()
+        auth_failed = (
+            result.returncode == 5 or
+            'permission denied' in lower_err or
+            'authentication' in lower_err or
+            'denied.' in lower_err
+        )
+        if auth_failed:
+            continue
+        if result.returncode != 0:
+            return False, result.stderr.strip() or 'Ошибка смены пароля'
+        return True, f'Пароль киоска изменён'
+    return False, 'Не удалось подключиться ни одним паролем'
 
 @login_required
 def dashboard(request):
@@ -159,8 +280,6 @@ def dashboard(request):
 
     online_pct = round(shown_online / result_count * 100) if result_count else 0
     offline_pct = round(shown_offline / result_count * 100) if result_count else 0
-    suggestions = sorted(d.hostname for d in device_list)[:200]
-
     context = {
         'devices': devices,
         'page_obj': page_obj,
@@ -193,7 +312,6 @@ def dashboard(request):
         },
         'online_pct': online_pct,
         'offline_pct': offline_pct,
-        'suggestions': suggestions,
     }
     return render(request, 'devices/dashboard.html', context)
 
@@ -448,11 +566,9 @@ def device_reboot(request, pk):
         return redirect('device_detail_page', pk=pk)
     
     try:
-        result = ssh_reboot(device.vpn_ip)
-        
-        if result is None:
-            messages.success(request, f'✅ {device.hostname} ушёл в перезагрузку')
-        elif result.returncode == 0:
+        result = ssh_reboot(device)
+
+        if result.returncode == 0:
             messages.success(request, f'✅ Команда reboot отправлена на {device.hostname}')
         else:
             messages.warning(request, f'⚠️ {device.hostname}: {result.stderr.strip() or "код ошибки: "+str(result.returncode)}')
@@ -471,13 +587,13 @@ def device_stop(request, pk):
     
     try:
         cmd = "sed -i '/^storageService\\.remoteParams\\.host/s/^/#/' /home/terminal/rtk/configuration.local.conf"
-        result = ssh_execute(device.vpn_ip, cmd)
-        
+        result = ssh_execute(device, cmd)
+
         if result.returncode != 0:
             messages.warning(request, f'⚠️ Ошибка изменения конфига: {result.stderr.strip()}')
             return redirect('device_detail_page', pk=pk)
-        
-        ssh_reboot(device.vpn_ip)
+
+        ssh_reboot(device)
         messages.success(request, f'✅ Сервис {device.hostname} остановлен, перезагрузка...')
     except Exception as e:
         messages.error(request, f'❌ Ошибка: {e}')
@@ -494,18 +610,58 @@ def device_start(request, pk):
     
     try:
         cmd = "sed -i '/^#storageService\\.remoteParams\\.host/s/^#//' /home/terminal/rtk/configuration.local.conf"
-        result = ssh_execute(device.vpn_ip, cmd)
-        
+        result = ssh_execute(device, cmd)
+
         if result.returncode != 0:
             messages.warning(request, f'⚠️ Ошибка изменения конфига: {result.stderr.strip()}')
             return redirect('device_detail_page', pk=pk)
-        
-        ssh_reboot(device.vpn_ip)
+
+        ssh_reboot(device)
         messages.success(request, f'✅ Сервис {device.hostname} запущен, перезагрузка...')
     except Exception as e:
         messages.error(request, f'❌ Ошибка: {e}')
     
     return redirect('device_detail_page', pk=pk)
+
+@user_passes_test(is_admin)
+def device_upload(request, pk):
+    """Загрузка файла на киоск по SCP."""
+    device = get_object_or_404(Device, pk=pk)
+    if request.method == 'POST':
+        uploaded = request.FILES.get('file')
+        target = (request.POST.get('target_path') or '').strip()
+        if not uploaded:
+            messages.error(request, 'Выберите файл для загрузки')
+        elif not target:
+            messages.error(request, 'Укажите путь назначения на киоске (например /tmp/файл)')
+        elif not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
+            messages.error(request, f'Нет VPN IP у {device.hostname}')
+        else:
+            ok, msg = upload_file_to_device(device, uploaded, target)
+            if ok:
+                messages.success(request, f'{device.hostname}: {msg}')
+            else:
+                messages.error(request, f'{device.hostname}: {msg}')
+    return redirect('device_detail_page', pk=pk)
+
+@user_passes_test(is_admin)
+def device_set_password(request, pk):
+    """Меняет SSH-пароль киоска на стандартный (settings.DEVICE_SSH_PASSWORD)."""
+    device = get_object_or_404(Device, pk=pk)
+    if request.method == 'POST':
+        target = (request.POST.get('new_password') or '').strip() or settings.DEVICE_SSH_PASSWORD
+        if not target:
+            messages.error(request, 'Не задан стандартный SSH-пароль в настройках')
+        else:
+            ok, msg = ssh_change_password(device, target)
+            if ok:
+                if device.ssh_password != target:
+                    Device.objects.filter(pk=device.pk).update(ssh_password=target)
+                messages.success(request, f'{device.hostname}: {msg}')
+            else:
+                messages.error(request, f'{device.hostname}: {msg}')
+    return redirect('device_detail_page', pk=pk)
+
 
 @user_passes_test(is_admin)
 def bulk_action(request):
@@ -528,17 +684,17 @@ def bulk_action(request):
             
             try:
                 if action == 'reboot':
-                    ssh_reboot(device.vpn_ip)
+                    ssh_reboot(device)
                 elif action == 'stop':
                     cmd = "sed -i '/^storageService\\.remoteParams\\.host/s/^/#/' /home/terminal/rtk/configuration.local.conf"
-                    result = ssh_execute(device.vpn_ip, cmd)
+                    result = ssh_execute(device, cmd)
                     if result and result.returncode == 0:
-                        ssh_reboot(device.vpn_ip)
+                        ssh_reboot(device)
                 elif action == 'start':
                     cmd = "sed -i '/^#storageService\\.remoteParams\\.host/s/^#//' /home/terminal/rtk/configuration.local.conf"
-                    result = ssh_execute(device.vpn_ip, cmd)
+                    result = ssh_execute(device, cmd)
                     if result and result.returncode == 0:
-                        ssh_reboot(device.vpn_ip)
+                        ssh_reboot(device)
                 
                 success += 1
             except:

@@ -1,10 +1,10 @@
 import json
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
-from django.test import TransactionTestCase
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.db import connection
@@ -610,3 +610,88 @@ class ImportExamsTests(TestCase):
         Device.objects.all().update(exam_count=512)
         resp = self.client.get(reverse('dashboard'))
         self.assertContains(resp, 'Осмотры: 512')
+
+
+@override_settings(DEVICE_SSH_PASSWORD='global-pass', DEVICE_SSH_PASSWORDS=['backup-pass'])
+class SshHelperTests(TestCase):
+    def setUp(self):
+        self.device = Device.objects.create(hostname='900', vpn_ip='10.0.0.9')
+
+    def _auth_fail(self, pwd):
+        return SimpleNamespace(returncode=5, stdout='', stderr='Permission denied (publickey,password).')
+
+    @patch('devices.views.subprocess.run')
+    def test_uses_device_password_first(self, m):
+        self.device.ssh_password = 'device-pass'
+        self.device.save()
+
+        def fake(args, capture_output=True, text=True, timeout=15):
+            pwd = args[2]
+            if pwd == 'device-pass':
+                return SimpleNamespace(returncode=0, stdout='ok', stderr='')
+            return self._auth_fail(pwd)
+
+        m.side_effect = fake
+        from devices.views import ssh_execute
+        res = ssh_execute(self.device, 'uptime')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(m.call_count, 1)
+
+    @patch('devices.views.subprocess.run')
+    def test_falls_back_to_global_password(self, m):
+        self.device.ssh_password = 'wrong-pass'
+        self.device.save()
+
+        def fake(args, capture_output=True, text=True, timeout=15):
+            pwd = args[2]
+            if pwd == 'global-pass':
+                return SimpleNamespace(returncode=0, stdout='ok', stderr='')
+            return self._auth_fail(pwd)
+
+        m.side_effect = fake
+        from devices.views import ssh_execute
+        res = ssh_execute(self.device, 'uptime')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(m.call_count, 2)  # устройство → глобальный → успех
+
+    def test_upload_requires_admin(self):
+        self.client.force_login(_technician())
+        resp = self.client.post(reverse('device_upload', args=[self.device.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp.url)
+
+    @patch('devices.views.subprocess.run')
+    def test_change_password_uses_working_password_and_sets_new(self, m):
+        self.device.ssh_password = 'old-device-pass'
+        self.device.save()
+
+        def fake(args, capture_output=True, text=True, timeout=20):
+            pwd = args[2]
+            remote = args[-1]
+            if pwd == 'old-device-pass':
+                self.assertIn('terminal:Pochta@medQaZ', remote)
+                return SimpleNamespace(returncode=0, stdout='', stderr='')
+            return self._auth_fail(pwd)
+
+        m.side_effect = fake
+        from devices.views import ssh_change_password
+        ok, msg = ssh_change_password(self.device, 'Pochta@medQaZ')
+        self.assertTrue(ok)
+        self.assertEqual(m.call_count, 1)  # рабочий пароль — с первого раза
+
+    @patch('devices.views.subprocess.run')
+    def test_change_password_falls_back_when_first_wrong(self, m):
+        self.device.ssh_password = ''
+        self.device.save()
+
+        def fake(args, capture_output=True, text=True, timeout=20):
+            pwd = args[2]
+            if pwd == 'backup-pass':
+                return SimpleNamespace(returncode=0, stdout='', stderr='')
+            return self._auth_fail(pwd)
+
+        m.side_effect = fake
+        from devices.views import ssh_change_password
+        ok, msg = ssh_change_password(self.device, 'Pochta@medQaZ')
+        self.assertTrue(ok)
+        self.assertEqual(m.call_count, 2)  # глобальный после неудачных

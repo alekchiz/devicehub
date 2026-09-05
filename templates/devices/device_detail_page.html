@@ -150,6 +150,33 @@
                     <i class="bi bi-play-circle"></i> Старт
                 </a>
             </div>
+            <div class="card-body border-top">
+                <form method="post" action="{% url 'device_upload' device.pk %}" enctype="multipart/form-data"
+                      class="d-flex align-items-center gap-2 flex-wrap">
+                    {% csrf_token %}
+                    <div>
+                        <label class="text-muted small d-block mb-1">Файл</label>
+                        <input type="file" name="file" class="form-control form-control-sm" style="max-width:260px;" required>
+                    </div>
+                    <div>
+                        <label class="text-muted small d-block mb-1">Путь на киоске</label>
+                        <input type="text" name="target_path" class="form-control form-control-sm"
+                               placeholder="/tmp/пример" style="max-width:200px;" required>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary btn-sm mt-4">
+                        <i class="bi bi-upload"></i> Загрузить
+                    </button>
+                </form>
+                <div class="text-muted small mt-2">
+                    <i class="bi bi-shield-lock"></i>
+                    SSH: {% if device.ssh_password %}свой пароль киоска{% else %}общий пароль/резервные из настроек{% endif %}
+                    <form method="post" action="{% url 'device_set_password' device.pk %}" class="d-inline-block ms-2"
+                          onsubmit="return confirm('Сменить SSH-пароль киоска {{ device.hostname }} на стандартный?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-key"></i> Сменить пароль на стандартный</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>

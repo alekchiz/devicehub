@@ -50,6 +50,7 @@ class Device(models.Model):
     anydesk = models.CharField(max_length=50, blank=True, verbose_name="AnyDesk")
     sn = models.CharField(max_length=50, blank=True, verbose_name="Серийный номер")
     exam_count = models.IntegerField(null=True, blank=True, verbose_name="Количество осмотров")
+    ssh_password = models.CharField(max_length=100, blank=True, verbose_name="SSH пароль")
     os = models.CharField(max_length=100, blank=True, verbose_name="ОС")
     ver = models.CharField(max_length=10, blank=True)
     secureboot = models.CharField(max_length=20, blank=True, verbose_name="Secure Boot")

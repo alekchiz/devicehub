@@ -40,7 +40,7 @@ class DeviceAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'last_updated')
     fieldsets = (
         ('Основное', {'fields': ('hostname', 'vpn_ip', 'anydesk', 'sn', 'os', 'software', 'broker')}),
-        ('Сеть и доступ', {'fields': ('kernel', 'secureboot', 'ver', 'network_speed')}),
+        ('Сеть и доступ', {'fields': ('kernel', 'secureboot', 'ver', 'network_speed', 'ssh_password')}),
         ('Оборудование', {'fields': ('alco', 'tonometer', 'x11vnc')}),
         ('Телеметрия', {'fields': (
             'cpu_load',
