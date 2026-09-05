@@ -109,7 +109,7 @@ def dashboard(request):
         return (
             (not dev.is_online) or dev.in_repair or
             v_state in ('soon', 'expired') or
-            not dev.alco_ok or not dev.tono_ok or not dev.temp_ok
+            not dev.alco_ok or not dev.tono_ok
         )
 
     problems_filter = request.GET.get('problems') == '1'
@@ -130,7 +130,7 @@ def dashboard(request):
     else:
         device_list.sort(key=lambda d: d.hostname)
 
-    med_ready = sum(1 for d in device_list if d.alco_ok and d.tono_ok and d.temp_ok)
+    med_ready = sum(1 for d in device_list if d.alco_ok and d.tono_ok)
     v_expired = sum(1 for d in device_list if verif_states.get(d.id, ('none',))[0] == 'expired')
     v_soon = sum(1 for d in device_list if verif_states.get(d.id, ('none',))[0] == 'soon')
     problems_count = sum(1 for d in device_list if _is_problem(d))
@@ -814,15 +814,14 @@ def export_med_devices_report(request):
     """Отчёт по киоскам: состояние средств измерений (алко/тоно/термо)."""
     devices = Device.objects.filter(hostname__regex=r'^\d{3,}$').order_by('hostname')
     wb, ws = new_workbook("Мед.средства")
-    headers = ['Киоск', 'Алкотестер', 'Тонометр', 'Термометр', 'Средства в порядке', 'Онлайн', 'Последнее обновление']
+    headers = ['Киоск', 'Алкотестер', 'Тонометр', 'Средства в порядке', 'Онлайн', 'Последнее обновление']
     ws.append(headers)
     for d in devices:
         alco = 'OK' if d.alco_ok else 'Ошибка/нет'
         tono = 'OK' if d.tono_ok else 'Ошибка/нет'
-        temp = 'OK' if d.temp_ok else 'Нет данных'
-        ok = 'Да' if (d.alco_ok and d.tono_ok and d.temp_ok) else 'Нет'
+        ok = 'Да' if (d.alco_ok and d.tono_ok) else 'Нет'
         ws.append([
-            d.hostname, alco, tono, temp, ok,
+            d.hostname, alco, tono, ok,
             'Онлайн' if d.is_online else 'Оффлайн',
             d.last_updated.strftime('%Y-%m-%d %H:%M') if d.last_updated else '',
         ])

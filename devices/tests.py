@@ -4,8 +4,11 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.test import TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
 
 from accounts.models import UserProfile
 from .models import Device, Repair, Client, DeviceEvent
@@ -389,33 +392,31 @@ class NotificationTests(TestCase):
 
 class DeviceMedIndicatorTests(TestCase):
     def setUp(self):
-        self.device = Device.objects.create(hostname='123', alco='✅', tonometer='✅', temperature='36.6')
-
-    def test_cpu_temperature_does_not_count_as_thermometer(self):
-        self.device.temperature = ''
-        self.device.cpu_temperature = '58.0°C'
-        self.device.save()
-        self.device.refresh_from_db()
-        self.assertFalse(self.device.temp_ok)
+        self.device = Device.objects.create(hostname='123', alco='✅', tonometer='✅')
 
     def test_indicators(self):
         self.assertTrue(self.device.alco_ok)
         self.assertTrue(self.device.tono_ok)
-        self.assertTrue(self.device.temp_ok)
 
         self.device.alco = 'ошибка'
-        self.device.temperature = ''
         self.device.save()
         self.device.refresh_from_db()
         self.assertFalse(self.device.alco_ok)
-        self.assertFalse(self.device.temp_ok)
+        self.assertTrue(self.device.tono_ok)
+
+    def test_tonometer_bad(self):
+        self.device.tonometer = '❌'
+        self.device.save()
+        self.device.refresh_from_db()
+        self.assertFalse(self.device.tono_ok)
 
     def test_dashboard_shows_med_indicators(self):
-        Device.objects.all().update(alco='✅', tonometer='✅', temperature='36.6')
+        Device.objects.all().update(alco='✅', tonometer='✅')
         self.client.force_login(_technician())
         resp = self.client.get(reverse('dashboard'))
         self.assertContains(resp, 'med-indicators')
         self.assertContains(resp, 'mi ok')
+        self.assertNotContains(resp, 'bi-thermometer-half')
 
 
 class VerificationTests(TestCase):
@@ -543,3 +544,26 @@ class UptimeTests(TestCase):
         resp = self.client.get(reverse('analytics') + '?period=month')
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, '30 дней')
+
+
+class MoveTemperatureMigrationTests(TransactionTestCase):
+    """Проверка data-миграции 0011: старая CPU-температура уходит в cpu_temperature,
+    а поле temperature очищается (чтобы не срабатывал индикатор термометра)."""
+    migrate_from = [('devices', '0010_device_cpu_temperature')]
+    migrate_to = [('devices', '0011_move_temperature_to_cpu')]
+
+    def test_moves_temperature_to_cpu(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_from)
+        old_apps = executor.loader.project_state(self.migrate_from).apps
+        OldDevice = old_apps.get_model('devices', 'Device')
+        OldDevice.objects.create(hostname='321', temperature='27.8°C')
+
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_to)
+
+        new_apps = executor.loader.project_state(self.migrate_to).apps
+        NewDevice = new_apps.get_model('devices', 'Device')
+        d = NewDevice.objects.get(hostname='321')
+        self.assertEqual(d.cpu_temperature, '27.8°C')
+        self.assertEqual(d.temperature, '')

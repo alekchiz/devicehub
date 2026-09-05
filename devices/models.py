@@ -103,13 +103,6 @@ class Device(models.Model):
         """Тонометр исправен и подключён."""
         return self._device_ok(self.tonometer)
 
-    @property
-    def temp_ok(self):
-        """Термометр отдаёт корректные показания."""
-        if not self.temperature:
-            return False
-        return self.temperature.strip() not in ('0', '0.0', 'N/A', '-')
-
     def __str__(self):
         return self.hostname
 

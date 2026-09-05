@@ -237,7 +237,6 @@
                 <div class="med-indicators">
                     <span class="mi {{ device.alco_ok|yesno:'ok,err' }}" title="Алкотестер: {{ device.alco_ok|yesno:'подключён,проблема' }}"><i class="bi bi-droplet-half"></i></span>
                     <span class="mi {{ device.tono_ok|yesno:'ok,err' }}" title="Тонометр: {{ device.tono_ok|yesno:'подключён,проблема' }}"><i class="bi bi-heart-pulse"></i></span>
-                    <span class="mi {{ device.temp_ok|yesno:'ok,err' }}" title="Термометр: {{ device.temp_ok|yesno:'данные есть,нет' }}"><i class="bi bi-thermometer-half"></i></span>
                 </div>
                 {% with vs=verif_states|get_item:device.pk %}
                 {% if vs %}

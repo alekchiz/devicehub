@@ -168,10 +168,6 @@
                         <td class="text-muted"><i class="bi bi-heart-pulse"></i> Тонометр</td>
                         <td>{{ device.tonometer|default:"—" }} <span class="badge-soft vs-{{ device.tono_ok|yesno:'ok,expired' }}">{{ device.tono_ok|yesno:'OK,проблема' }}</span></td>
                     </tr>
-                    <tr>
-                        <td class="text-muted"><i class="bi bi-thermometer-half"></i> Термометр</td>
-                        <td>{{ device.temperature|default:"—" }} <span class="badge-soft vs-{{ device.temp_ok|yesno:'ok,expired' }}">{{ device.temp_ok|yesno:'данные есть,нет' }}</span></td>
-                    </tr>
                 </table>
             </div>
         </div>
