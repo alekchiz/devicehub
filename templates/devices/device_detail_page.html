@@ -108,6 +108,8 @@
                     <tr><td class="text-muted">Диск</td><td>{% if device.hdd_percent %}{{ device.hdd_percent }}% ({{ device.hdd|floatformat:1 }}/{{ device.hdd_total|floatformat:1 }} ГБ){% else %}—{% endif %}</td></tr>
                     <tr><td class="text-muted">Температура CPU</td>
                         <td>{% if device.cpu_temperature %}{{ device.cpu_temperature }}{% else %}{{ device.temperature|default:"—" }}{% endif %}</td></tr>
+                    <tr><td class="text-muted">Количество осмотров</td>
+                        <td>{% if device.exam_count is not None %}{{ device.exam_count }}{% else %}—{% endif %}</td></tr>
                 </table>
             </div>
         </div>

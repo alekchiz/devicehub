@@ -264,6 +264,84 @@ def analytics_uptime(request):
     })
 
 
+def _cell_text(value):
+    """Чистовой текст ячейки: числа без хвоста .0, остальное — строка."""
+    if value is None:
+        return ''
+    if isinstance(value, bool):
+        return '1' if value else '0'
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
+
+
+@user_passes_test(is_admin)
+def import_exams(request):
+    """Загрузка Excel: SN клиента | расположение | количество осмотров.
+
+    Сопоставляются киоски по SN (fallback — hostname); обновляются
+    количество осмотров и расположение (Location создаётся при необходимости).
+    """
+    result = None
+    header_tokens = {'sn', 'сн', 'номер', 'клиент', 'sn клиента', 'серийный номер'}
+
+    if request.method == 'POST' and request.FILES.get('file'):
+        from openpyxl import load_workbook
+
+        stats = {
+            'rows': 0,
+            'found': 0,
+            'updated': 0,
+            'not_found': [],
+            'no_exam': 0,
+        }
+
+        workbook = load_workbook(request.FILES['file'], data_only=True, read_only=True)
+        sheet = workbook.active
+
+        for row in sheet.iter_rows(values_only=True):
+            if not row:
+                continue
+            sn = _cell_text(row[0])
+            location_name = row[1].strip() if len(row) > 1 and row[1] is not None else ''
+            exam_cell = row[2] if len(row) > 2 else None
+
+            if not sn or sn and sn.lower() in header_tokens:
+                continue
+
+            stats['rows'] += 1
+            exam_count = None
+            if exam_cell is not None and exam_cell != '':
+                try:
+                    exam_count = int(float(exam_cell))
+                except (TypeError, ValueError):
+                    exam_count = None
+
+            device = (Device.objects.filter(sn__iexact=sn).first()
+                      or Device.objects.filter(hostname__iexact=sn).first())
+            if not device:
+                stats['not_found'].append(sn)
+                continue
+
+            stats['found'] += 1
+            updates = {}
+            if exam_count is not None:
+                updates['exam_count'] = exam_count
+            elif 'exam_count' not in updates:
+                stats['no_exam'] += 1
+            if location_name:
+                location, _ = Location.objects.get_or_create(name=location_name)
+                updates['location'] = location
+
+            if updates:
+                Device.objects.filter(pk=device.pk).update(**updates)
+                stats['updated'] += 1
+
+        result = stats
+
+    return render(request, 'devices/import_exams.html', {'result': result})
+
+
 @login_required
 def device_history(request):
     """Страница истории событий киосков (аудит)."""

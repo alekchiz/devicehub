@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h1 class="mb-0"><i class="bi bi-upload"></i> Загрузка данных киосков</h1>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Дашборд
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-file-earmark-excel"></i> Файл Excel (.xlsx)</div>
+    <div class="card-body">
+        <p class="muted">Ожидаются три колонки в первой строке листа (в любом порядке файла, но именно так):</p>
+        <ol class="small text-muted mb-3">
+            <li><b>SN клиента</b> — серийный номер киоска (сопоставление с полем SN, при отсутствии — по номеру киоска)</li>
+            <li><b>расположение</b> — объект/место установки (создаст локацию при необходимости)</li>
+            <li><b>количество осмотров</b> — число осмотров, показывается в карточке</li>
+        </ol>
+        <form method="post" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
+            {% csrf_token %}
+            <input type="file" name="file" accept=".xlsx,.xlsm" required class="form-control" style="max-width:360px;">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-upload"></i> Загрузить
+            </button>
+        </form>
+    </div>
+</div>
+
+{% if result %}
+<div class="card">
+    <div class="card-header"><i class="bi bi-list-check"></i> Результат</div>
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3"><div class="stat-card"><div class="card-body p-3">
+                <div class="stat-value">{{ result.rows }}</div><div class="stat-label">Строк обработано</div>
+            </div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card"><div class="card-body p-3">
+                <div class="stat-value online">{{ result.found }}</div><div class="stat-label">Киосков найдено</div>
+            </div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card"><div class="card-body p-3">
+                <div class="stat-value">{{ result.updated }}</div><div class="stat-label">Обновлено</div>
+            </div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card"><div class="card-body p-3">
+                <div class="stat-value offline">{{ result.not_found|length }}</div><div class="stat-label">Не найдено</div>
+            </div></div></div>
+        </div>
+
+        {% if result.not_found %}
+        <div class="alert alert-warning mb-0">
+            <b>Не сопоставлено с киосками</b> (проверь SN/номера):
+            <code>{{ result.not_found|slice:":50"|join:", " }}</code>
+            {% if result.not_found|length > 50 %}… и ещё {{ result.not_found|length|add:"-50" }}{% endif %}
+        </div>
+        {% else %}
+        <div class="alert alert-success mb-0">Все строки сопоставлены с киосками.</div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

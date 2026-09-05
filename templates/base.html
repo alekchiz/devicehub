@@ -51,6 +51,13 @@
                             <i class="bi bi-graph-up-arrow"></i>Аналитика
                         </a>
                     </li>
+                    {% if user.profile.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'import' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'import_exams' %}">
+                            <i class="bi bi-upload"></i>Загрузка
+                        </a>
+                    </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link {% if 'clients' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'clients_list' %}">
                             <i class="bi bi-building"></i>Объекты

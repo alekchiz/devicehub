@@ -8,6 +8,7 @@ urlpatterns = [
     path('history/', views.device_history, name='device_history'),
     path('reports/', views.reports_page, name='reports'),
     path('analytics/', views.analytics_uptime, name='analytics'),
+    path('import/', views.import_exams, name='import_exams'),
     path('bulk-action/', views.bulk_action, name='bulk_action'),
     path('device/<int:pk>/', views.device_detail_modal, name='device_detail_modal'),
     path('device/<int:pk>/detail/', views.device_detail_page, name='device_detail_page'),

@@ -255,6 +255,9 @@
                 {% if device.broker %}
                 <div class="meta" style="font-size:0.5rem;">📡 {{ device.broker }}</div>
                 {% endif %}
+                {% if device.exam_count is not None %}
+                <div class="meta"><i class="bi bi-clipboard-check"></i> Осмотры: {{ device.exam_count }}</div>
+                {% endif %}
 
                 {% if device.cpu_load is not None or device.hdd_percent is not None or device.memory_percent is not None %}
                 <div class="device-metrics">

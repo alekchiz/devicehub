@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from accounts.models import UserProfile
 from .models import Device, Repair, Client, DeviceEvent
@@ -567,3 +568,45 @@ class MoveTemperatureMigrationTests(TransactionTestCase):
         d = NewDevice.objects.get(hostname='321')
         self.assertEqual(d.cpu_temperature, '27.8°C')
         self.assertEqual(d.temperature, '')
+
+
+class ImportExamsTests(TestCase):
+    def setUp(self):
+        self.device = Device.objects.create(hostname='123', sn='SN-0001')
+
+    def _xlsx(self):
+        import io
+        from openpyxl import Workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.append(['SN клиента', 'расположение', 'количество осмотров'])
+        ws.append(['SN-0001', 'Автопарк №3', 512])
+        ws.append(['ZZZ-99', 'Улица', 10])
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return SimpleUploadedFile('results.xlsx', buf.read())
+
+    def test_import_requires_admin(self):
+        self.client.force_login(_technician())
+        resp = self.client.post(reverse('import_exams'), {'file': self._xlsx()})
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp.url)
+
+    def test_import_updates_device(self):
+        from devices.models import Location
+        self.client.force_login(_admin())
+        resp = self.client.post(reverse('import_exams'), {'file': self._xlsx()})
+        self.assertEqual(resp.status_code, 200)
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.exam_count, 512)
+        self.assertEqual(self.device.location.name, 'Автопарк №3')
+        self.assertTrue(Location.objects.filter(name='Автопарк №3').exists())
+        # Не сопоставленный SN показывается в отчёте.
+        self.assertContains(resp, 'ZZZ-99')
+
+    def test_dashboard_shows_exam_count(self):
+        self.client.force_login(_technician())
+        Device.objects.all().update(exam_count=512)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertContains(resp, 'Осмотры: 512')
