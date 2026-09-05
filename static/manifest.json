@@ -1,0 +1,17 @@
+{
+  "name": "МедКиоск — предрейсовые осмотры",
+  "short_name": "МедКиоск",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e293b",
+  "theme_color": "#1e293b",
+  "description": "Мониторинг киосков предрейсовых медицинских осмотров",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
