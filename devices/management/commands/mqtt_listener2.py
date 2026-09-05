@@ -50,6 +50,7 @@ def on_message(client, userdata, msg):
             'cpu_load': safe_float(payload.get('cpu_load')),
             'memory_percent': safe_float(payload.get('memory_percent')),
             'temperature': safe_str(payload.get('temperature', '')),
+            'cpu_temperature': safe_str(payload.get('cpu_temperature', '')),
             'uptime_formatted': safe_str(payload.get('uptime_info', '')),
             'secureboot': safe_str(payload.get('secureboot', '')),
             'broker': MQTT_BROKER,

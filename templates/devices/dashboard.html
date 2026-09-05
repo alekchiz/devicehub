@@ -302,8 +302,8 @@
                 {% endif %}
 
                 <div class="device-detail" id="detail-{{ device.pk }}">
-                    {% if device.temperature %}
-                    <div class="row-line"><span class="k">Температура</span><span class="v">{{ device.temperature }}</span></div>
+                    {% if device.cpu_temperature or device.temperature %}
+                    <div class="row-line"><span class="k">Температура CPU</span><span class="v">{% if device.cpu_temperature %}{{ device.cpu_temperature }}{% else %}{{ device.temperature }}{% endif %}</span></div>
                     {% endif %}
                     {% if device.uptime_formatted %}
                     <div class="row-line"><span class="k">Аптайм</span><span class="v">{{ device.uptime_formatted }}</span></div>

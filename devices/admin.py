@@ -46,6 +46,7 @@ class DeviceAdmin(admin.ModelAdmin):
             'cpu_load',
             'memory_total', 'memory_used', 'memory_free', 'memory_percent',
             'temperature', 'uptime', 'uptime_formatted',
+            'cpu_temperature',
             'hdd', 'hdd_total', 'hdd_percent',
         )}),
         ('Регистрация', {'fields': ('owner', 'location', 'client', 'contact')}),

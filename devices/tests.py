@@ -391,6 +391,13 @@ class DeviceMedIndicatorTests(TestCase):
     def setUp(self):
         self.device = Device.objects.create(hostname='123', alco='✅', tonometer='✅', temperature='36.6')
 
+    def test_cpu_temperature_does_not_count_as_thermometer(self):
+        self.device.temperature = ''
+        self.device.cpu_temperature = '58.0°C'
+        self.device.save()
+        self.device.refresh_from_db()
+        self.assertFalse(self.device.temp_ok)
+
     def test_indicators(self):
         self.assertTrue(self.device.alco_ok)
         self.assertTrue(self.device.tono_ok)

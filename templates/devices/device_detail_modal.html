@@ -58,7 +58,8 @@
                 <tr><td class="text-muted">CPU</td><td>{% if device.cpu_load %}{{ device.cpu_load }}%{% else %}—{% endif %}</td></tr>
                 <tr><td class="text-muted">RAM</td><td>{% if device.memory_percent %}{{ device.memory_percent }}%{% else %}—{% endif %}</td></tr>
                 <tr><td class="text-muted">Диск</td><td>{% if device.hdd_percent %}{{ device.hdd_percent }}% ({{ device.hdd|floatformat:1 }}/{{ device.hdd_total|floatformat:1 }} ГБ){% else %}—{% endif %}</td></tr>
-                <tr><td class="text-muted">Температура</td><td>{{ device.temperature|default:"—" }}</td></tr>
+                <tr><td class="text-muted">Температура CPU</td>
+                    <td>{% if device.cpu_temperature %}{{ device.cpu_temperature }}{% else %}{{ device.temperature|default:"—" }}{% endif %}</td></tr>
             </table>
         </div>
     </div>

@@ -60,6 +60,7 @@ class Device(models.Model):
     memory_free = models.FloatField(null=True, blank=True, verbose_name="RAM своб. ГБ")
     memory_percent = models.FloatField(null=True, blank=True, verbose_name="RAM %")
     temperature = models.CharField(max_length=20, blank=True, verbose_name="Температура")
+    cpu_temperature = models.CharField(max_length=20, blank=True, verbose_name="Температура CPU")
     uptime_formatted = models.CharField(max_length=100, blank=True, verbose_name="Аптайм")
 
     owner = models.ForeignKey(Owner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Владелец")
