@@ -224,6 +224,29 @@ class DeviceViewsTests(TestCase):
         self.assertContains(resp, 'Всего')
         self.assertNotContains(resp, 'Найдено')
 
+    def test_med_and_distribution_blocks(self):
+        self.client.force_login(_technician())
+        Device.objects.all().update(alco='✅', tonometer='✅', temperature='36.6', is_online=True)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertContains(resp, 'Средства готовы')
+        self.assertContains(resp, 'dist-bar')
+        self.assertContains(resp, 'Распределение')
+        self.assertContains(resp, 'Проблемные')
+
+    def test_problems_filter(self):
+        self.client.force_login(_technician())
+        Device.objects.all().update(alco='✅', tonometer='✅', temperature='36.6', is_online=True)
+        Device.objects.create(hostname='777', is_online=False)
+        resp = self.client.get(reverse('dashboard') + '?problems=1')
+        # '777' оффлайн -> в проблемных; '123' полностью готов -> нет
+        self.assertContains(resp, '777')
+        self.assertNotContains(resp, '>123<')
+
+    def test_active_sort(self):
+        self.client.force_login(_technician())
+        resp = self.client.get(reverse('dashboard') + '?sort=active')
+        self.assertEqual(resp.status_code, 200)
+
     def test_history_requires_login(self):
         resp = self.client.get(reverse('device_history'))
         self.assertEqual(resp.status_code, 302)

@@ -102,6 +102,39 @@ def dashboard(request):
         if current is None or v.valid_until > current[1]:
             verif_states[v.device_id] = (v.expiry_state, v.valid_until, v.id)
 
+    def _is_problem(dev):
+        v = verif_states.get(dev.id)
+        v_state = v[0] if v else 'none'
+        return (
+            (not dev.is_online) or dev.in_repair or
+            v_state in ('soon', 'expired') or
+            not dev.alco_ok or not dev.tono_ok or not dev.temp_ok
+        )
+
+    problems_filter = request.GET.get('problems') == '1'
+    sort_mode = request.GET.get('sort', 'number')
+
+    device_list = list(
+        devices.order_by('hostname').select_related('owner', 'client', 'location')
+    )
+
+    if problems_filter:
+        device_list = [d for d in device_list if _is_problem(d)]
+
+    if sort_mode == 'active':
+        device_list.sort(key=lambda d: d.last_mqtt_message or timezone.datetime.min, reverse=True)
+    elif sort_mode == 'problems':
+        device_list.sort(key=lambda d: (not _is_problem(d), d.hostname))
+    else:
+        device_list.sort(key=lambda d: d.hostname)
+
+    med_ready = sum(1 for d in device_list if d.alco_ok and d.tono_ok and d.temp_ok)
+    v_expired = sum(1 for d in device_list if verif_states.get(d.id, ('none',))[0] == 'expired')
+    v_soon = sum(1 for d in device_list if verif_states.get(d.id, ('none',))[0] == 'soon')
+    problems_count = sum(1 for d in device_list if _is_problem(d))
+    shown_online = sum(1 for d in device_list if d.is_online and not d.in_repair)
+    shown_offline = sum(1 for d in device_list if not d.is_online and not d.in_repair)
+
     if repair_count:
         page_status = 'repair'
     elif offline_count:
@@ -115,15 +148,16 @@ def dashboard(request):
         'offline': build_qs(request, status='offline'),
         'repair': build_qs(request, status='repair'),
     }
-    reset_url = build_qs(request, status='', q='')
+    reset_url = build_qs(request, status='', q='', problems='', sort='')
 
-    # Все киоски на одной странице; поиск/статус лишь сужают выборку.
-    devices = list(
-        devices.order_by('hostname').select_related('owner', 'client', 'location')
-    )
+    devices = device_list
     page_obj = None
     base_qs = ''
     result_count = len(devices)
+
+    online_pct = round(shown_online / result_count * 100) if result_count else 0
+    offline_pct = round(shown_offline / result_count * 100) if result_count else 0
+    suggestions = sorted(d.hostname for d in device_list)[:200]
 
     context = {
         'devices': devices,
@@ -141,6 +175,23 @@ def dashboard(request):
         'filter_active': active_filters,
         'result_count': result_count,
         'search_mode': search_mode,
+        'med_ready': med_ready,
+        'med_total': result_count,
+        'verif_expired': v_expired,
+        'verif_soon': v_soon,
+        'problems_count': problems_count,
+        'problems_filter': problems_filter,
+        'problems_chip': build_qs(request, problems='1'),
+        'problems_off_chip': build_qs(request, problems=''),
+        'sort_mode': sort_mode,
+        'sort_chips': {
+            'number': build_qs(request, sort='number'),
+            'active': build_qs(request, sort='active'),
+            'problems': build_qs(request, sort='problems'),
+        },
+        'online_pct': online_pct,
+        'offline_pct': offline_pct,
+        'suggestions': suggestions,
     }
     return render(request, 'devices/dashboard.html', context)
 
