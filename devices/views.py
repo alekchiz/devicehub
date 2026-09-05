@@ -7,6 +7,7 @@ from django.db.models import Q, Count
 from .models import Device, Owner, Client, Location, Repair, Verification, DeviceEvent
 from tickets.models import Ticket
 from shipments.models import Shipment
+from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -122,7 +123,8 @@ def dashboard(request):
         device_list = [d for d in device_list if _is_problem(d)]
 
     if sort_mode == 'active':
-        device_list.sort(key=lambda d: d.last_mqtt_message or timezone.datetime.min, reverse=True)
+        aware_min = timezone.now() - timedelta(days=3650)
+        device_list.sort(key=lambda d: d.last_mqtt_message or aware_min, reverse=True)
     elif sort_mode == 'problems':
         device_list.sort(key=lambda d: (not _is_problem(d), d.hostname))
     else:

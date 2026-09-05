@@ -244,6 +244,14 @@ class DeviceViewsTests(TestCase):
 
     def test_active_sort(self):
         self.client.force_login(_technician())
+        # Смешанные данные: у одного нет last_mqtt_message (None).
+        Device.objects.all().update(
+            last_mqtt_message=None
+        )
+        Device.objects.create(
+            hostname='999', is_online=True,
+            last_mqtt_message=timezone.now(),
+        )
         resp = self.client.get(reverse('dashboard') + '?sort=active')
         self.assertEqual(resp.status_code, 200)
 
