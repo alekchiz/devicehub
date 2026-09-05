@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import Owner, Location, Client, Contact, Device, Repair, Verification, DeviceEvent
+from .admin_views import analytics_view, import_view
 
 
 @admin.register(Owner)
@@ -51,6 +52,15 @@ class DeviceAdmin(admin.ModelAdmin):
         ('Регистрация', {'fields': ('owner', 'location', 'client', 'contact')}),
         ('Статус', {'fields': ('is_online', 'in_repair', 'offline_since', 'last_mqtt_message')}),
     )
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom = [
+            path('analytics/', self.admin_site.admin_view(analytics_view), name='devices_device_analytics'),
+            path('import/', self.admin_site.admin_view(import_view), name='devices_device_import'),
+        ]
+        return custom + urls
 
 
 @admin.register(Repair)

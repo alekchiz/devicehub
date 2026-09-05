@@ -1,0 +1,37 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h2>Доступность киосков ({{ period_days }} дней)</h2>
+<p>
+    Средняя: <b>{{ avg_uptime }}%</b> &middot; здоровых ≥99%: {{ healthy }}
+    &middot; 90–99%: {{ warning }} &middot; &lt;90%: {{ critical }} &middot; киосков: {{ total }}
+</p>
+<p>
+    <a href="?period=week&sort={{ sort }}">Неделя</a> &middot;
+    <a href="?period=month&sort={{ sort }}">Месяц</a> &middot;
+    Сорт:
+    <a href="?period={{ period }}&sort=hostname">номер</a> &middot;
+    <a href="?period={{ period }}&sort=pct">доступность</a>
+</p>
+<table class="grp-table" style="width:100%;border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th style="text-align:left;">Киоск</th>
+            <th>Аптайм</th>
+            <th>Онлайн (ч)</th>
+            <th>Оффлайн (ч)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr>
+            <td><a href="{% url 'admin:devices_device_change' r.device.pk %}">{{ r.device.hostname }}</a></td>
+            <td><b>{{ r.pct }}%</b></td>
+            <td>{{ r.online_h }}</td>
+            <td>{{ r.offline_h }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">Нет киосков</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "admin/change_list.html" %}
+{% block object-tools %}
+  <ul class="object-tools">
+    <li><a href="{% url 'admin:devices_device_analytics' %}" class="addlink">Доступность</a></li>
+    <li><a href="{% url 'admin:devices_device_import' %}" class="addlink">Загрузка Excel</a></li>
+  </ul>
+  {{ block.super }}
+{% endblock %}

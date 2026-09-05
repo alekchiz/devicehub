@@ -157,8 +157,7 @@ def ticket_comment(request, pk):
 
 @login_required
 def activity_log_list(request):
-    logs = ActivityLog.objects.all()[:100]
-    return render(request, 'tickets/activity_log.html', {'logs': logs})
+    return redirect('/admin/tickets/activitylog/')
 
 @login_required
 def export_tickets_excel(request):

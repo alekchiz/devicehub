@@ -7,14 +7,7 @@ from core.excel_utils import new_workbook, xlsx_response, style_header_row, auto
 
 @login_required
 def trips_list(request):
-    trips = Trip.objects.all()
-    devices = Device.objects.all().order_by('hostname')
-    
-    context = {
-        'trips': trips,
-        'devices': devices,
-    }
-    return render(request, 'trips/trips.html', context)
+    return redirect('/admin/trips/trip/')
 
 @login_required
 def trip_create(request):

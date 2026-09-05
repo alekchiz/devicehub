@@ -8,6 +8,77 @@
 
 <div class="row g-3">
 
+    {% if user.is_superuser %}
+    <div class="col-12">
+        <label class="section-title mb-2"><i class="bi bi-gear-fill"></i> Управление (админка)</label>
+        <div class="row g-2">
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="/admin/devices/device/" class="report-card">
+                    <i class="bi bi-cpu"></i>
+                    <span><b>Киоски</b><small>Устройства и SSH-доступ</small></span>
+                    <i class="bi bi-arrow-right report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="/admin/devices/repair/" class="report-card">
+                    <i class="bi bi-tools"></i>
+                    <span><b>Ремонты</b><small>Журнал ремонтов</small></span>
+                    <i class="bi bi-arrow-right report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="/admin/devices/verification/" class="report-card">
+                    <i class="bi bi-shield-check"></i>
+                    <span><b>Поверки</b><small>Сроки средств измерений</small></span>
+                    <i class="bi bi-arrow-right report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="/admin/tickets/ticket/" class="report-card">
+                    <i class="bi bi-ticket-detailed"></i>
+                    <span><b>Заявки</b><small>Все заявки и комментарии</small></span>
+                    <i class="bi bi-arrow-right report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="/admin/shipments/shipment/" class="report-card">
+                    <i class="bi bi-box-seam"></i>
+                    <span><b>Отправки</b><small>Доставка оборудования</small></span>
+                    <i class="bi bi-arrow-right report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="/admin/trips/trip/" class="report-card">
+                    <i class="bi bi-geo-alt"></i>
+                    <span><b>Поездки</b><small>Выезды к киоскам</small></span>
+                    <i class="bi bi-arrow-right report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="/admin/devices/deviceevent/" class="report-card">
+                    <i class="bi bi-clock-history"></i>
+                    <span><b>История событий</b><small>Аудит статусов</small></span>
+                    <i class="bi bi-arrow-right report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="/admin/devices/device/analytics/" class="report-card">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <span><b>Доступность</b><small>Uptime за период</small></span>
+                    <i class="bi bi-arrow-right report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="/admin/devices/device/import/" class="report-card">
+                    <i class="bi bi-upload"></i>
+                    <span><b>Загрузка Excel</b><small>Осмотры и расположение</small></span>
+                    <i class="bi bi-arrow-right report-go"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="col-12">
         <label class="section-title mb-2">Парк киосков</label>
         <div class="row g-2">

@@ -277,7 +277,7 @@
 <div class="card mt-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-shield-check"></i> Поверки оборудования</span>
-        <a href="{% url 'verifications_list' %}" class="btn btn-sm btn-soft btn-outline-secondary">Все поверки</a>
+        <a href="/admin/devices/verification/?device__hostname__exact={{ device.hostname }}" class="btn btn-sm btn-soft btn-outline-secondary">Все поверки</a>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -313,7 +313,7 @@
 <div class="card mt-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-clock-history"></i> История событий</span>
-        <a href="{% url 'device_history' %}?q={{ device.hostname }}" class="btn btn-sm btn-soft btn-outline-secondary">Все события</a>
+        <a href="/admin/devices/deviceevent/?device__hostname__exact={{ device.hostname }}" class="btn btn-sm btn-soft btn-outline-secondary">Все события</a>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">

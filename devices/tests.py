@@ -278,36 +278,9 @@ class DeviceViewsTests(TestCase):
 
     def test_history_renders(self):
         self.client.force_login(_technician())
-        device = Device.objects.get(hostname='123')
-        DeviceEvent.objects.create(device=device, event='offline', message='Нет связи')
         resp = self.client.get(reverse('device_history'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'История киосков')
-        self.assertContains(resp, 'Нет связи')
-        self.assertContains(resp, 'ev-offline')
-
-    def test_history_filters_by_hostname(self):
-        self.client.force_login(_technician())
-        device = Device.objects.get(hostname='123')
-        other = Device.objects.create(hostname='777')
-        DeviceEvent.objects.create(device=device, event='online')
-        DeviceEvent.objects.create(device=other, event='offline')
-        resp = self.client.get(reverse('device_history') + '?q=777')
-        self.assertContains(resp, '777')
-        self.assertNotContains(resp, '>123<')
-
-    def test_history_filters_by_date(self):
-        self.client.force_login(_technician())
-        device = Device.objects.get(hostname='123')
-        ev_new = DeviceEvent.objects.create(device=device, event='online', message='НОВОЕ')
-        ev_old = DeviceEvent.objects.create(device=device, event='offline', message='СТАРОЕ')
-        DeviceEvent.objects.filter(pk=ev_old.pk).update(
-            created_at=timezone.now() - timedelta(days=3)
-        )
-        today = timezone.localdate().isoformat()
-        resp = self.client.get(reverse('device_history') + f'?date_from={today}')
-        self.assertContains(resp, 'НОВОЕ')
-        self.assertNotContains(resp, 'СТАРОЕ')
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/devices/deviceevent/', resp.url)
 
 
     def test_repair_progress_renders_on_card(self):
@@ -338,13 +311,9 @@ class DeviceViewsTests(TestCase):
 
     def test_clients_page_renders(self):
         self.client.force_login(_technician())
-        client = Client.objects.create(name='ООО Тест')
-        Device.objects.all().update(client=client, is_online=True)
         resp = self.client.get(reverse('clients_list'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'ООО Тест')
-        self.assertContains(resp, '123')
-        self.assertContains(resp, 'cd-dot online')
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/devices/client/', resp.url)
 
 class NotificationTests(TestCase):
     def setUp(self):
@@ -533,18 +502,15 @@ class UptimeTests(TestCase):
 
     def test_analytics_page_renders(self):
         self.client.force_login(_technician())
-        self._event('online', self.now - timedelta(minutes=1))
         resp = self.client.get(reverse('analytics'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Доступность киосков')
-        self.assertContains(resp, '123')
-        self.assertContains(resp, 'Неделя')
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/devices/device/analytics/', resp.url)
 
     def test_analytics_page_month_period(self):
         self.client.force_login(_technician())
         resp = self.client.get(reverse('analytics') + '?period=month')
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, '30 дней')
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/devices/device/analytics/', resp.url)
 
 
 class MoveTemperatureMigrationTests(TransactionTestCase):
@@ -594,22 +560,63 @@ class ImportExamsTests(TestCase):
         self.assertIn('/accounts/login/', resp.url)
 
     def test_import_updates_device(self):
-        from devices.models import Location
         self.client.force_login(_admin())
         resp = self.client.post(reverse('import_exams'), {'file': self._xlsx()})
-        self.assertEqual(resp.status_code, 200)
-        self.device.refresh_from_db()
-        self.assertEqual(self.device.exam_count, 512)
-        self.assertEqual(self.device.location.name, 'Автопарк №3')
-        self.assertTrue(Location.objects.filter(name='Автопарк №3').exists())
-        # Не сопоставленный SN показывается в отчёте.
-        self.assertContains(resp, 'ZZZ-99')
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/devices/device/import/', resp.url)
 
     def test_dashboard_shows_exam_count(self):
         self.client.force_login(_technician())
         Device.objects.all().update(exam_count=512)
         resp = self.client.get(reverse('dashboard'))
         self.assertContains(resp, 'Осмотры: 512')
+
+
+class AdminPagesTests(TestCase):
+    def setUp(self):
+        self.device = Device.objects.create(hostname='123', sn='SN-0001')
+
+    def _staff(self):
+        return User.objects.create_user(
+            'staff', password='pass', is_staff=True, is_superuser=True
+        )
+
+    def test_analytics_page_in_admin(self):
+        self.client.force_login(self._staff())
+        resp = self.client.get('/admin/devices/device/analytics/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Аптайм')
+        self.assertContains(resp, '123')
+
+    def test_analytics_requires_staff(self):
+        self.client.force_login(_technician())
+        resp = self.client.get('/admin/devices/device/analytics/')
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/login/', resp.url)
+
+    def test_import_updates_device_in_admin(self):
+        self.client.force_login(self._staff())
+        resp = self.client.post(
+            '/admin/devices/device/import/',
+            {'file': SimpleUploadedFile('r.xlsx', self._xlsx_bytes())},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.exam_count, 512)
+        self.assertEqual(self.device.location.name, 'Автопарк №3')
+        self.assertContains(resp, 'Киосков найдено: 1')
+        self.assertContains(resp, 'Обновлено: 1')
+
+    def _xlsx_bytes(self):
+        import io
+        from openpyxl import Workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.append(['SN клиента', 'расположение', 'количество осмотров'])
+        ws.append(['SN-0001', 'Автопарк №3', 512])
+        buf = io.BytesIO()
+        wb.save(buf)
+        return buf.getvalue()
 
 
 @override_settings(DEVICE_SSH_PASSWORD='global-pass', DEVICE_SSH_PASSWORDS=['backup-pass'])

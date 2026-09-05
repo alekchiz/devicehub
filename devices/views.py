@@ -318,19 +318,7 @@ def dashboard(request):
 
 @login_required
 def clients_list(request):
-    """Страница объектов со списком их киосков и агрегированным статусом."""
-    clients = (
-        Client.objects
-        .annotate(
-            total=Count('device'),
-            online=Count('device', filter=Q(device__is_online=True, device__in_repair=False)),
-            offline=Count('device', filter=Q(device__is_online=False, device__in_repair=False)),
-            repair=Count('device', filter=Q(device__in_repair=True)),
-        )
-        .prefetch_related('device_set')
-        .order_by('name')
-    )
-    return render(request, 'devices/clients.html', {'clients': clients})
+    return redirect('/admin/devices/client/')
 
 
 @login_required
@@ -341,45 +329,7 @@ def reports_page(request):
 
 @login_required
 def analytics_uptime(request):
-    """Доступность киосков за период (неделя/месяц) из истории событий."""
-    from devices.analytics import device_uptime
-
-    period = 'month' if request.GET.get('period') == 'month' else 'week'
-    days = 30 if period == 'month' else 7
-    sort = 'pct' if request.GET.get('sort') != 'hostname' else 'hostname'
-
-    end = timezone.now()
-    start = end - timedelta(days=days)
-    total_seconds = (end - start).total_seconds()
-
-    devices = Device.objects.filter(hostname__regex=r'^\d{3,}$').order_by('hostname')
-    rows = []
-    for d in devices:
-        fraction = device_uptime(d, start, end)
-        rows.append({
-            'device': d,
-            'pct': round(fraction * 100, 1),
-            'online_h': round(total_seconds * fraction / 3600, 1),
-            'offline_h': round(total_seconds * (1 - fraction) / 3600, 1),
-        })
-
-    if sort == 'pct':
-        rows.sort(key=lambda r: (r['pct'], r['device'].hostname))
-    else:
-        rows.sort(key=lambda r: r['device'].hostname)
-
-    avg = round(sum(r['pct'] for r in rows) / len(rows), 1) if rows else 0.0
-    return render(request, 'devices/analytics.html', {
-        'rows': rows,
-        'period': period,
-        'sort': sort,
-        'period_days': days,
-        'total': len(rows),
-        'avg_uptime': avg,
-        'healthy': sum(1 for r in rows if r['pct'] >= 99.0),
-        'warn': sum(1 for r in rows if 90.0 <= r['pct'] < 99.0),
-        'critical': sum(1 for r in rows if r['pct'] < 90.0),
-    })
+    return redirect('/admin/devices/device/analytics/')
 
 
 def _cell_text(value):
@@ -395,109 +345,12 @@ def _cell_text(value):
 
 @user_passes_test(is_admin)
 def import_exams(request):
-    """Загрузка Excel: SN клиента | расположение | количество осмотров.
-
-    Сопоставляются киоски по SN (fallback — hostname); обновляются
-    количество осмотров и расположение (Location создаётся при необходимости).
-    """
-    result = None
-    header_tokens = {'sn', 'сн', 'номер', 'клиент', 'sn клиента', 'серийный номер'}
-
-    if request.method == 'POST' and request.FILES.get('file'):
-        from openpyxl import load_workbook
-
-        stats = {
-            'rows': 0,
-            'found': 0,
-            'updated': 0,
-            'not_found': [],
-            'no_exam': 0,
-        }
-
-        workbook = load_workbook(request.FILES['file'], data_only=True, read_only=True)
-        sheet = workbook.active
-
-        for row in sheet.iter_rows(values_only=True):
-            if not row:
-                continue
-            sn = _cell_text(row[0])
-            location_name = row[1].strip() if len(row) > 1 and row[1] is not None else ''
-            exam_cell = row[2] if len(row) > 2 else None
-
-            if not sn or sn and sn.lower() in header_tokens:
-                continue
-
-            stats['rows'] += 1
-            exam_count = None
-            if exam_cell is not None and exam_cell != '':
-                try:
-                    exam_count = int(float(exam_cell))
-                except (TypeError, ValueError):
-                    exam_count = None
-
-            device = (Device.objects.filter(sn__iexact=sn).first()
-                      or Device.objects.filter(hostname__iexact=sn).first())
-            if not device:
-                stats['not_found'].append(sn)
-                continue
-
-            stats['found'] += 1
-            updates = {}
-            if exam_count is not None:
-                updates['exam_count'] = exam_count
-            elif 'exam_count' not in updates:
-                stats['no_exam'] += 1
-            if location_name:
-                location, _ = Location.objects.get_or_create(name=location_name)
-                updates['location'] = location
-
-            if updates:
-                Device.objects.filter(pk=device.pk).update(**updates)
-                stats['updated'] += 1
-
-        result = stats
-
-    return render(request, 'devices/import_exams.html', {'result': result})
+    return redirect('/admin/devices/device/import/')
 
 
 @login_required
 def device_history(request):
-    """Страница истории событий киосков (аудит)."""
-    events = DeviceEvent.objects.select_related('device')
-
-    ev_type = request.GET.get('event', '')
-    q = request.GET.get('q', '')
-    date_from = request.GET.get('date_from', '')
-    date_to = request.GET.get('date_to', '')
-    if ev_type:
-        events = events.filter(event=ev_type)
-    if q:
-        events = events.filter(device__hostname__icontains=q)
-    if date_from:
-        events = events.filter(created_at__date__gte=date_from)
-    if date_to:
-        events = events.filter(created_at__date__lte=date_to)
-
-    paginator = Paginator(events, 60)
-    page_obj = paginator.get_page(request.GET.get('page'))
-
-    qs_params = request.GET.copy()
-    qs_params.pop('page', None)
-    qs_string = qs_params.urlencode()
-    base_qs = f'&{qs_string}' if qs_string else ''
-
-    return render(request, 'devices/history.html', {
-        'page_obj': page_obj,
-        'events': page_obj.object_list,
-        'ev_type': ev_type,
-        'q': q,
-        'date_from': date_from,
-        'date_to': date_to,
-        'base_qs': base_qs,
-        'filter_active': bool(ev_type or q or date_from or date_to),
-        'result_count': paginator.count,
-        'event_choices': DeviceEvent.EVENT_CHOICES,
-    })
+    return redirect('/admin/devices/deviceevent/')
 
 
 @login_required
@@ -921,14 +774,7 @@ def export_tonometer_report(request):
     return xlsx_response(wb, 'tonometer_report.xlsx')
 
 def repairs_list(request):
-    repairs = Repair.objects.select_related('device').all()
-    devices = Device.objects.filter(hostname__regex=r'^\d{3,}$').order_by('hostname')
-    
-    context = {
-        'repairs': repairs,
-        'devices': devices,
-    }
-    return render(request, 'devices/repairs.html', context)
+    return redirect('/admin/devices/repair/')
 
 def repair_create(request):
     if request.method == 'POST':
@@ -980,10 +826,7 @@ def export_repairs_excel(request):
 
 @login_required
 def verifications_list(request):
-    verifications = Verification.objects.select_related('device').all()
-    devices = Device.objects.filter(hostname__regex=r'^\d{3,}$').order_by('hostname')
-    context = {'verifications': verifications, 'devices': devices}
-    return render(request, 'devices/verifications.html', context)
+    return redirect('/admin/devices/verification/')
 
 @login_required
 def verification_create(request):

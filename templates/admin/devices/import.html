@@ -1,0 +1,22 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h2>Загрузка данных киосков</h2>
+<p>Файл Excel с тремя колонками: <b>SN клиента</b> | <b>расположение</b> | <b>количество осмотров</b>.</p>
+<form method="post" enctype="multipart/form-data" action="{% url 'admin:devices_device_import' %}">
+    {% csrf_token %}
+    <input type="file" name="file" accept=".xlsx,.xlsm" required style="margin-right:0.5rem;">
+    <button type="submit" class="button" style="padding:4px 12px;">Загрузить</button>
+</form>
+
+{% if result %}
+<ul style="margin-top:1rem;">
+    <li>Строк обработано: {{ result.rows }}</li>
+    <li>Киосков найдено: {{ result.found }}</li>
+    <li>Обновлено: {{ result.updated }}</li>
+    <li>Не сопоставлено: {{ result.not_found|length }}</li>
+</ul>
+{% if result.not_found %}
+<p>Не сопоставлено с киосками: <code>{{ result.not_found|slice:":50"|join:", " }}</code></p>
+{% endif %}
+{% endif %}
+{% endblock %}

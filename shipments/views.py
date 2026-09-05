@@ -7,16 +7,7 @@ from core.excel_utils import new_workbook, xlsx_response, style_header_row, auto
 
 @login_required
 def shipments_list(request):
-    shipments = Shipment.objects.all()
-    devices = Device.objects.all().order_by('hostname')
-    locations = Location.objects.all()
-    
-    context = {
-        'shipments': shipments,
-        'devices': devices,
-        'locations': locations,
-    }
-    return render(request, 'shipments/shipments.html', context)
+    return redirect('/admin/shipments/shipment/')
 
 @login_required
 def shipment_create(request):
