@@ -386,7 +386,6 @@ body {
     background: var(--card-bg);
     position: relative;
     overflow: hidden;
-    aspect-ratio: 1 / 1;
     display: flex;
     flex-direction: column;
 }

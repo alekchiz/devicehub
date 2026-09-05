@@ -189,9 +189,9 @@
         </span>
     </div>
 </div>
-<div class="row g-3">
+<div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-4 row-cols-xl-5 g-3">
 {% for device in devices %}
-    <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
+    <div class="col">
         <div class="device-card card h-100 {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}" data-device-id="{{ device.pk }}">
             <button type="button" class="device-expand" onclick="event.stopPropagation();toggleDeviceMetrics({{ device.pk }})"
                     title="Детальные метрики" aria-label="Детальные метрики">
