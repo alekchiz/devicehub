@@ -63,7 +63,7 @@ services:
 
   mqtt_listener:
     build: .
-    command: python manage.py mqtt_listener2
+    command: python -u manage.py mqtt_listener2
     environment:
       - DJANGO_SETTINGS_MODULE=core.settings_docker
       - DB_HOST=db
@@ -86,7 +86,7 @@ services:
 
   bot:
     build: .
-    command: python manage.py telegram_bot
+    command: python -u manage.py telegram_bot
     environment:
       - DJANGO_SETTINGS_MODULE=core.settings_docker
       - DB_HOST=db
