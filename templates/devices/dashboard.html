@@ -195,16 +195,15 @@
                 <i class="bi bi-graph-up" id="expIco-{{ device.pk }}"></i>
             </button>
             <div class="card-body" onclick="window.location='{% url 'device_detail_page' device.pk %}'">
-                <div class="dc-ecg" aria-hidden="true"><svg viewBox="0 0 120 20" preserveAspectRatio="none"><path class="ecg-line" d="M0 11 L20 11 L24 5 L29 17 L34 8 L40 12 L50 12 L55 8 L61 15 L70 15 L80 7 L90 13 L96 13 L103 5 L110 11 L120 11"/></svg></div>
                 <div class="dc-top">
                     <div class="d-flex align-items-center gap-1" style="min-width:0;">
                         <span class="hostname text-truncate" style="min-width:0;">{{ device.hostname }}</span>
                         {% if not device.is_standard %}<span class="ns-badge"><i class="bi bi-stars"></i> Новый</span>{% endif %}
                     </div>
                     <div class="d-flex align-items-center gap-1">
-                        <span class="badge-soft {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}" id="badge-{{ device.pk }}">
-                            {% if device.in_repair %}🔧 Ремонт{% elif device.is_online %}🟢 Онлайн{% else %}🔴 Оффлайн{% endif %}
-                        </span>
+                        <span class="badge-soft {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}"
+                              id="badge-{{ device.pk }}"
+                              title="{% if device.in_repair %}Ремонт{% elif device.is_online %}Онлайн{% else %}Оффлайн{% endif %}"></span>
                         {% if user.profile.role == 'admin' and device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
                         <input type="checkbox" name="device_ids" value="{{ device.pk }}" class="form-check-input device-check" onclick="event.stopPropagation();updateBulkPanel()" style="width:12px;height:12px;margin:0;">
                         {% endif %}
@@ -437,7 +436,7 @@ function applyStatus(payload) {
         var badge = document.getElementById('badge-' + id);
         if (badge) {
             badge.className = 'badge-soft ' + (d.in_repair ? 'repair' : (d.online ? 'online' : 'offline'));
-            badge.textContent = d.in_repair ? '🔧 Ремонт' : (d.online ? '🟢 Онлайн' : '🔴 Оффлайн');
+            badge.title = d.in_repair ? 'Ремонт' : (d.online ? 'Онлайн' : 'Оффлайн');
         }
 
         var off = document.getElementById('offline-' + id);

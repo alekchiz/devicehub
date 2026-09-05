@@ -556,20 +556,13 @@ body {
 .device-card::before { width: 4px; }
 .device-card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px var(--status-glow), var(--card-hover-shadow); }
 
-/* ЭКГ-линия поверх низа-карточки (декор) */
-.dc-ecg { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; opacity: .5; pointer-events: none; z-index: 0; }
-.dc-ecg svg { width: 100%; height: 100%; display: block; }
-.dc-ecg .ecg-line { fill: none; stroke-width: 1.7; stroke-linejoin: round; stroke-linecap: round; }
-.device-card.online  .dc-ecg .ecg-line { stroke: var(--success); }
-.device-card.offline .dc-ecg .ecg-line { stroke: var(--danger); }
-.device-card.repair  .dc-ecg .ecg-line { stroke: var(--warning); }
-.device-card .card-body { padding-bottom: 26px; }
-
 /* Шапка карточки */
 .dc-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .4rem; }
 .device-card .hostname { font-size: .96rem; font-weight: 700; letter-spacing: -.2px; }
-.device-card .badge-soft { display: inline-flex; align-items: center; gap: .3rem; border-radius: 99px; font-weight: 600; }
-.device-card .badge-soft::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.device-card .badge-soft { display: inline-flex; width: 9px; height: 9px; padding: 0; border: 0; border-radius: 50%; flex: none; }
+.device-card.online  .badge-soft { background: var(--success); }
+.device-card.offline .badge-soft { background: var(--danger); }
+.device-card.repair  .badge-soft { background: var(--warning); }
 .device-card .vpn-link:hover, .device-card .ad-link:hover { color: var(--primary); text-decoration: underline; }
 
 .device-card .dc-exams { font-weight: 600; color: var(--text-light); margin-top: .15rem; }
@@ -591,11 +584,23 @@ body {
     --status-tint: #241a3d; --status-glow: rgba(167, 139, 250, .16);
     border-color: #6d28d9;
 }
-.device-card.nonstandard .dc-ecg .ecg-line { stroke: #8b5cf6; }
 .device-card .ns-badge {
     display: inline-flex; align-items: center; gap: .25rem; flex: none;
     font-size: .56rem; font-weight: 700; color: #7c3aed;
     background: rgba(124, 58, 237, .12); border-radius: 99px; padding: 2px 7px;
+}
+
+/* Мобильная защита от «съезжания» содержимого карточек */
+@media (max-width: 575.98px) {
+    .device-card .card-body { padding-right: 10px; padding-left: 12px; }
+    .device-card .hostname { font-size: .9rem; }
+    .device-card .dc-top { gap: .3rem; }
+    .device-card .device-metrics { gap: .3rem; }
+    .device-card .metric { min-width: 0; }
+    .device-card .metric-value { min-width: 1.7rem; font-size: .6rem; }
+    .device-card .metric-track { height: 4px; }
+    .device-card .med-indicators .mi { font-size: .56rem; padding: 2px 6px; }
+    .device-card .meta { font-size: .62rem; line-height: 1.25; }
 }
 
 /* ==========================================================================
@@ -612,7 +617,6 @@ body {
     content: ''; position: absolute; right: -60px; top: -90px; width: 260px; height: 260px;
     border-radius: 50%; background: radial-gradient(circle, rgba(153, 246, 228, .30), transparent 70%);
 }
-.detail-hero .hero-ecg { position: absolute; left: 0; right: 0; bottom: 0; height: 28px; opacity: .35; pointer-events: none; }
 .detail-hero h1 { font-size: 1.55rem; font-weight: 700; color: #fff; margin: 0; letter-spacing: -.3px; }
 .detail-hero .hostname-glare { color: rgba(255,255,255,.85); }
 .detail-hero .status-badge {
