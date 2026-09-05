@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-head accent-ok">
+    <h1><i class="bi bi-file-earmark-bar-graph"></i> Отчёты</h1>
+    <span class="muted"><i class="bi bi-download"></i> Выгрузки в Excel</span>
+</div>
+
+<div class="row g-3">
+
+    <div class="col-12">
+        <label class="section-title mb-2">Парк киосков</label>
+        <div class="row g-2">
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="{% url 'export_devices' %}" class="report-card">
+                    <i class="bi bi-hdd-network"></i>
+                    <span><b>Киоски</b><small>Полный список</small></span>
+                    <i class="bi bi-download report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="{% url 'export_devices_history' %}" class="report-card">
+                    <i class="bi bi-clock-history"></i>
+                    <span><b>История киосков</b><small>Создание и активность</small></span>
+                    <i class="bi bi-download report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="{% url 'export_devices_stats' %}" class="report-card">
+                    <i class="bi bi-bar-chart-line"></i>
+                    <span><b>Статистика</b><small>Онлайн по дням/месяцам</small></span>
+                    <i class="bi bi-download report-go"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <label class="section-title mb-2">Средства измерений</label>
+        <div class="row g-2">
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="{% url 'export_alco_report' %}" class="report-card">
+                    <i class="bi bi-droplet-half"></i>
+                    <span><b>Алкотестеры</b><small>Подключение по киоскам</small></span>
+                    <i class="bi bi-download report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="{% url 'export_tonometer_report' %}" class="report-card">
+                    <i class="bi bi-heart-pulse"></i>
+                    <span><b>Тонометры</b><small>Подключение по киоскам</small></span>
+                    <i class="bi bi-download report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="{% url 'export_med_devices' %}" class="report-card">
+                    <i class="bi bi-first-aid"></i>
+                    <span><b>Мед.средства</b><small>Готовность алко+тоно+термо</small></span>
+                    <i class="bi bi-download report-go"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <label class="section-title mb-2">Поверки</label>
+        <div class="row g-2">
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="{% url 'export_verifications' %}" class="report-card">
+                    <i class="bi bi-shield-check"></i>
+                    <span><b>Поверки</b><small>Сроки и состояние</small></span>
+                    <i class="bi bi-download report-go"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <label class="section-title mb-2">Ремонты / сервис</label>
+        <div class="row g-2">
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="{% url 'export_repairs' %}" class="report-card">
+                    <i class="bi bi-tools"></i>
+                    <span><b>Ремонты</b><small>Все записи</small></span>
+                    <i class="bi bi-download report-go"></i>
+                </a>
+            </div>
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <div class="report-card report-form">
+                    <i class="bi bi-calendar-range"></i>
+                    <span><b>Ремонты за период</b></span>
+                    <form method="get" action="{% url 'export_repairs_report' %}" class="d-flex gap-1 mt-1 flex-wrap">
+                        <input type="date" name="date_from" class="form-control form-control-sm">
+                        <input type="date" name="date_to" class="form-control form-control-sm">
+                        <button class="btn btn-soft btn-sm btn-primary"><i class="bi bi-download"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

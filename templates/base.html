@@ -42,6 +42,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if 'reports' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'reports' %}">
+                            <i class="bi bi-file-earmark-bar-graph"></i>Отчёты
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if 'clients' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'clients_list' %}">
                             <i class="bi bi-building"></i>Объекты
                         </a>

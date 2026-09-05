@@ -6,6 +6,7 @@ urlpatterns = [
     path('status/', views.device_status_feed, name='device_status_feed'),
     path('clients/', views.clients_list, name='clients_list'),
     path('history/', views.device_history, name='device_history'),
+    path('reports/', views.reports_page, name='reports'),
     path('bulk-action/', views.bulk_action, name='bulk_action'),
     path('device/<int:pk>/', views.device_detail_modal, name='device_detail_modal'),
     path('device/<int:pk>/detail/', views.device_detail_page, name='device_detail_page'),

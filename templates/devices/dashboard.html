@@ -150,18 +150,6 @@
     </div>
 </div>
 
-<!-- Отчёты -->
-<div class="d-flex align-items-center gap-2 flex-wrap mb-3">
-    <label class="section-title mb-0">Отчёты:</label>
-    <a href="{% url 'export_devices' %}" class="btn btn-soft btn-success btn-sm"><i class="bi bi-download"></i> Киоски</a>
-    <a href="{% url 'export_devices_history' %}" class="btn btn-soft btn-info btn-sm"><i class="bi bi-clock-history"></i> История</a>
-    <a href="{% url 'export_devices_stats' %}" class="btn btn-soft btn-warning btn-sm"><i class="bi bi-graph-up"></i> Статистика</a>
-    <a href="{% url 'export_alco_report' %}" class="btn btn-soft btn-danger btn-sm"><i class="bi bi-droplet"></i> Алко</a>
-    <a href="{% url 'export_tonometer_report' %}" class="btn btn-soft btn-secondary btn-sm"><i class="bi bi-heart-pulse"></i> Тоно</a>
-    <a href="{% url 'export_verifications' %}" class="btn btn-soft btn-info btn-sm"><i class="bi bi-shield-check"></i> Поверки</a>
-    <a href="{% url 'export_med_devices' %}" class="btn btn-soft btn-primary btn-sm"><i class="bi bi-heart-pulse"></i> Мед.средства</a>
-</div>
-
 <!-- Массовые действия -->
 {% if user.profile.role == 'admin' %}
 <div class="filter-card card mb-3" id="bulkPanel" style="display:none;">

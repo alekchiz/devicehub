@@ -255,6 +255,18 @@ class DeviceViewsTests(TestCase):
         resp = self.client.get(reverse('dashboard') + '?sort=active')
         self.assertEqual(resp.status_code, 200)
 
+    def test_reports_page_requires_login(self):
+        resp = self.client.get(reverse('reports'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp.url)
+
+    def test_reports_page_renders(self):
+        self.client.force_login(_technician())
+        resp = self.client.get(reverse('reports'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Отчёты')
+        self.assertContains(resp, 'Мед.средства')
+
     def test_history_requires_login(self):
         resp = self.client.get(reverse('device_history'))
         self.assertEqual(resp.status_code, 302)

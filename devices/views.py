@@ -216,6 +216,12 @@ def clients_list(request):
 
 
 @login_required
+def reports_page(request):
+    """Страница отчётов: единый вход ко всем выгрузкам."""
+    return render(request, 'devices/reports.html')
+
+
+@login_required
 def device_history(request):
     """Страница истории событий киосков (аудит)."""
     events = DeviceEvent.objects.select_related('device')
