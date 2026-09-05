@@ -16,6 +16,30 @@ MQTT_PASS = settings.MQTT_PASS
 MQTT_TOPIC = settings.MQTT_TOPIC
 OFFLINE_TIMEOUT = 10
 
+DAY_BROKER = getattr(settings, 'MQTT_DAY_BROKER', '')
+DAY_PORT = int(getattr(settings, 'MQTT_DAY_PORT', MQTT_PORT))
+DAY_USER = getattr(settings, 'MQTT_DAY_USER', '') or MQTT_USER
+DAY_PASS = getattr(settings, 'MQTT_DAY_PASS', '') or MQTT_PASS
+DAY_TOPICS = [t.strip() for t in
+              getattr(settings, 'MQTT_DAY_TOPICS', 'pak/day,client/day').split(',') if t.strip()]
+
+
+def on_day_connect(client, userdata, flags, rc):
+    print(f"📊 Day-broker connected ({DAY_BROKER}) with result code {rc}")
+    for topic in DAY_TOPICS:
+        client.subscribe(f"{topic}/+")
+
+
+def on_day_message(client, userdata, msg):
+    try:
+        payload = json.loads(msg.payload.decode('utf-8'))
+        day_date = extract_day_date(msg.topic)
+        processed = ingest_day_snapshot(payload, day_date)
+        print(f"📊 Осмотры ПАК за {day_date}: {processed} киосков")
+    except Exception as e:
+        print(f"❌ Day MQTT error: {e}")
+
+
 def on_connect(client, userdata, flags, rc):
     print(f"MQTT connected to {MQTT_BROKER} with result code {rc}")
     client.subscribe(MQTT_TOPIC)
@@ -95,6 +119,16 @@ class Command(BaseCommand):
         check_offline_devices(OFFLINE_TIMEOUT)
         # Один раз при старте проверяем, не подошли ли сроки поверок.
         run_verification_reminders()
+
+        day_client = None
+        if DAY_BROKER:
+            day_client = mqtt.Client()
+            day_client.on_connect = on_day_connect
+            day_client.on_message = on_day_message
+            day_client.username_pw_set(DAY_USER, DAY_PASS)
+            print(f"📊 Day-broker: connecting to {DAY_BROKER}:{DAY_PORT} (topics: {', '.join(DAY_TOPICS)})")
+            day_client.connect(DAY_BROKER, DAY_PORT, 60)
+            day_client.loop_start()
 
         client = mqtt.Client()
         client.on_connect = on_connect

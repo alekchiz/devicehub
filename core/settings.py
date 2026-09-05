@@ -95,6 +95,14 @@ MQTT_USER = os.getenv('MQTT_USER', 'pak')
 MQTT_PASS = os.getenv('MQTT_PASS', '')
 MQTT_TOPIC = os.getenv('MQTT_TOPIC', '#')
 
+# Отдельный брокер для суточных снимков осмотров (если он отличается от
+# статусного брокера). Пустой MQTT_DAY_BROKER — day-подключение не запускается.
+MQTT_DAY_BROKER = os.getenv('MQTT_DAY_BROKER', '')
+MQTT_DAY_PORT = int(os.getenv('MQTT_DAY_PORT', str(MQTT_PORT)))
+MQTT_DAY_USER = os.getenv('MQTT_DAY_USER', MQTT_USER)
+MQTT_DAY_PASS = os.getenv('MQTT_DAY_PASS', MQTT_PASS)
+MQTT_DAY_TOPICS = os.getenv('MQTT_DAY_TOPICS', 'pak/day,client/day')
+
 # Доступ по SSH к киоскам (используется в views.py)
 DEVICE_SSH_USER = os.getenv('DEVICE_SSH_USER', 'terminal')
 DEVICE_SSH_PASSWORD = os.getenv('DEVICE_SSH_PASSWORD', '')
