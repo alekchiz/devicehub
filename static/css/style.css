@@ -432,6 +432,12 @@ body {
     border-radius: 6px;
     font-weight: 500;
 }
+.device-card .dc-links {
+    display: flex; flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    margin-top: 0.2rem;
+}
+.device-card .meta.dc-offline { color: var(--danger); font-weight: 600; }
 
 .device-metrics {
     margin-top: 0.5rem;
@@ -459,14 +465,26 @@ body {
 .metric-fill.is-bad { background: var(--danger); }
 .metric-value { color: var(--text-light); font-size: 0.62rem; min-width: 2.2rem; text-align: right; }
 
-.med-indicators { display: flex; gap: 0.3rem; margin-top: 0.35rem; }
-.med-indicators .mi {
-    width: 1.15rem; height: 1.15rem; border-radius: 8px;
-    background: var(--badge-light-bg); color: var(--badge-light-text);
-    display: inline-flex; align-items: center; justify-content: center; font-size: 0.6rem;
+.med-indicators {
+    display: flex; align-items: center; gap: 0.3rem;
+    margin-top: 0.4rem; padding-top: 0.4rem;
+    border-top: 1px solid var(--border);
 }
+.med-indicators .mi {
+    width: auto; height: auto; border-radius: 8px;
+    background: var(--badge-light-bg); color: var(--badge-light-text);
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 2px 8px; font-size: 0.62rem; font-weight: 500;
+}
+.med-indicators .mi i { font-size: 0.6rem; }
 .med-indicators .mi.ok { background: var(--badge-online-bg); color: var(--badge-online-color); }
 .med-indicators .mi.err { background: var(--badge-offline-bg); color: var(--badge-offline-color); }
+.med-indicators .mi-exams {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    margin-left: auto; font-size: 0.66rem; font-weight: 600;
+    color: var(--text-light);
+}
+.med-indicators .mi-exams i { font-size: 0.62rem; }
 .med-expiry {
     margin-top: 0.35rem; font-size: 0.62rem; font-weight: 600;
     display: flex; align-items: center; gap: 0.3rem;

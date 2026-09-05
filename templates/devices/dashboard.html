@@ -191,7 +191,7 @@
 </div>
 <div class="row g-3">
 {% for device in devices %}
-    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2">
+    <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
         <div class="device-card card h-100 {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}" data-device-id="{{ device.pk }}">
             <button type="button" class="device-expand" onclick="event.stopPropagation();toggleDeviceMetrics({{ device.pk }})"
                     title="Детальные метрики" aria-label="Детальные метрики">
@@ -209,34 +209,36 @@
                         {% endif %}
                     </div>
                 </div>
-                <div class="mb-1">
+                {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' or device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
+                <div class="dc-links">
+                    {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
                     <a href="ssh://terminal@{{ device.vpn_ip }}" class="vpn-link" onclick="event.stopPropagation();" title="Подключиться по SSH">
-                        <i class="bi bi-shield-check"></i> VPN: {{ device.vpn_ip|default:"—" }}
+                        <i class="bi bi-shield-check"></i>{{ device.vpn_ip }}
                     </a>
-                </div>
-                {% if device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
-                <div class="mb-1">
+                    {% endif %}
+                    {% if device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
                     <a href="anydesk:{{ device.anydesk }}" class="ad-link" onclick="event.stopPropagation();" title="Подключиться по AnyDesk">
-                        <i class="bi bi-display"></i> AD: {{ device.anydesk }}
+                        <i class="bi bi-display"></i>{{ device.anydesk }}
                     </a>
+                    {% endif %}
                 </div>
                 {% endif %}
-                {% if device.client or device.owner or device.location %}
+                {% if device.client or device.location %}
                 <div class="client-chip">
                     {% if device.client %}
                     <span class="chip" title="Объект"><i class="bi bi-building"></i>{{ device.client.name }}</span>
                     {% endif %}
-                    {% if device.owner %}
-                    <span class="chip" title="Владелец"><i class="bi bi-person"></i>{{ device.owner.name }}</span>
-                    {% endif %}
                     {% if device.location %}
-                    <span class="chip" title="Локация"><i class="bi bi-geo-alt"></i>{{ device.location.name }}</span>
+                    <span class="chip" title="Расположение"><i class="bi bi-geo-alt"></i>{{ device.location.name }}</span>
                     {% endif %}
                 </div>
                 {% endif %}
                 <div class="med-indicators">
-                    <span class="mi {{ device.alco_ok|yesno:'ok,err' }}" title="Алкотестер: {{ device.alco_ok|yesno:'подключён,проблема' }}"><i class="bi bi-droplet-half"></i></span>
-                    <span class="mi {{ device.tono_ok|yesno:'ok,err' }}" title="Тонометр: {{ device.tono_ok|yesno:'подключён,проблема' }}"><i class="bi bi-heart-pulse"></i></span>
+                    <span class="mi {{ device.alco_ok|yesno:'ok,err' }}" title="Алкотестер: {{ device.alco_ok|yesno:'подключён,проблема' }}"><i class="bi bi-droplet-half"></i> Алко</span>
+                    <span class="mi {{ device.tono_ok|yesno:'ok,err' }}" title="Тонометр: {{ device.tono_ok|yesno:'подключён,проблема' }}"><i class="bi bi-heart-pulse"></i> Тоно</span>
+                    {% if device.exam_count is not None %}
+                    <span class="mi-exams"><i class="bi bi-clipboard-check"></i> Осмотры: {{ device.exam_count }}</span>
+                    {% endif %}
                 </div>
                 {% with vs=verif_states|get_item:device.pk %}
                 {% if vs %}
@@ -250,13 +252,7 @@
                 {% endif %}
                 {% endwith %}
                 {% if device.offline_duration %}
-                <div class="meta" style="color:#dc2626;" id="offline-{{ device.pk }}"><i class="bi bi-clock"></i> {{ device.offline_duration }}</div>
-                {% endif %}
-                {% if device.broker %}
-                <div class="meta" style="font-size:0.5rem;">📡 {{ device.broker }}</div>
-                {% endif %}
-                {% if device.exam_count is not None %}
-                <div class="meta"><i class="bi bi-clipboard-check"></i> Осмотры: {{ device.exam_count }}</div>
+                <div class="meta dc-offline" id="offline-{{ device.pk }}"><i class="bi bi-clock"></i> оффлайн {{ device.offline_duration }}</div>
                 {% endif %}
 
                 {% if device.cpu_load is not None or device.hdd_percent is not None or device.memory_percent is not None %}
@@ -321,6 +317,9 @@
                     {% endif %}
                     {% if device.memory_used is not None %}
                     <div class="row-line"><span class="k">RAM</span><span class="v">{{ device.memory_used|floatformat:"0" }} / {{ device.memory_total|floatformat:"0" }} ГБ</span></div>
+                    {% endif %}
+                    {% if device.broker %}
+                    <div class="row-line"><span class="k">Брокер</span><span class="v">{{ device.broker }}</span></div>
                     {% endif %}
                     {% if device.last_mqtt_message %}
                     <div class="row-line"><span class="k">Послед. MQTT</span><span class="v">{{ device.last_mqtt_message|date:"d.m.Y H:i" }}</span></div>
