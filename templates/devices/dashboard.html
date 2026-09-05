@@ -195,8 +195,9 @@
                 <i class="bi bi-graph-up" id="expIco-{{ device.pk }}"></i>
             </button>
             <div class="card-body" onclick="window.location='{% url 'device_detail_page' device.pk %}'">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="hostname text-truncate" style="max-width:70%;">{{ device.hostname }}</span>
+                <div class="dc-ecg" aria-hidden="true"><svg viewBox="0 0 120 20" preserveAspectRatio="none"><path class="ecg-line" d="M0 11 L20 11 L24 5 L29 17 L34 8 L40 12 L50 12 L55 8 L61 15 L70 15 L80 7 L90 13 L96 13 L103 5 L110 11 L120 11"/></svg></div>
+                <div class="dc-top">
+                    <span class="hostname text-truncate" style="min-width:0;">{{ device.hostname }}</span>
                     <div class="d-flex align-items-center gap-1">
                         <span class="badge-soft {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}" id="badge-{{ device.pk }}">
                             {% if device.in_repair %}🔧 Ремонт{% elif device.is_online %}🟢 Онлайн{% else %}🔴 Оффлайн{% endif %}
@@ -235,7 +236,7 @@
                     <span class="mi {{ device.tono_ok|yesno:'ok,err' }}" title="Тонометр: {{ device.tono_ok|yesno:'подключён,проблема' }}"><i class="bi bi-heart-pulse"></i> Тоно</span>
                 </div>
                 {% with total_all=all_total|get_item:device.pk latest_day=today_exams|get_item:device.pk %}
-                <div class="meta"><i class="bi bi-clipboard-check"></i> Осмотры: всего {% if total_all is not None %}{{ total_all }}{% elif device.exam_count is not None %}{{ device.exam_count }}{% else %}—{% endif %} · за день {% if latest_day is not None %}{{ latest_day }}{% else %}0{% endif %}</div>
+                <div class="meta dc-exams"><i class="bi bi-clipboard-check"></i> Осмотры: всего {% if total_all is not None %}{{ total_all }}{% elif device.exam_count is not None %}{{ device.exam_count }}{% else %}—{% endif %} · за день {% if latest_day is not None %}{{ latest_day }}{% else %}0{% endif %}</div>
                 {% endwith %}
                 {% with vs=verif_states|get_item:device.pk %}
                 {% if vs %}

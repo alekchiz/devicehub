@@ -542,6 +542,92 @@ body {
 .client-chip .chip i { font-size: 0.55rem; }
 
 /* ==========================================================================
+   Медицинская тема — карточки устройств
+   ========================================================================== */
+
+.device-card { border-radius: 18px; }
+.device-card.online  { --status-tint: #ecfdf5; --status-glow: rgba(16,185,129,.16); }
+.device-card.offline { --status-tint: #fef2f2; --status-glow: rgba(239,68,68,.14); }
+.device-card.repair  { --status-tint: #fffbeb; --status-glow: rgba(217,119,6,.14); }
+[data-theme="dark"] .device-card.online  { --status-tint: #06283f; --status-glow: rgba(45,212,191,.12); }
+[data-theme="dark"] .device-card.offline { --status-tint: #3f0d0d; --status-glow: rgba(248,113,113,.12); }
+[data-theme="dark"] .device-card.repair  { --status-tint: #3a2a04; --status-glow: rgba(251,191,36,.12); }
+
+.device-card::before { width: 4px; }
+.device-card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px var(--status-glow), var(--card-hover-shadow); }
+
+/* ЭКГ-линия поверх низа-карточки (декор) */
+.dc-ecg { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; opacity: .5; pointer-events: none; z-index: 0; }
+.dc-ecg svg { width: 100%; height: 100%; display: block; }
+.dc-ecg .ecg-line { fill: none; stroke-width: 1.7; stroke-linejoin: round; stroke-linecap: round; }
+.device-card.online  .dc-ecg .ecg-line { stroke: var(--success); }
+.device-card.offline .dc-ecg .ecg-line { stroke: var(--danger); }
+.device-card.repair  .dc-ecg .ecg-line { stroke: var(--warning); }
+.device-card .card-body { padding-bottom: 26px; }
+
+/* Шапка карточки */
+.dc-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .4rem; }
+.device-card .hostname { font-size: .96rem; font-weight: 700; letter-spacing: -.2px; }
+.device-card .badge-soft { display: inline-flex; align-items: center; gap: .3rem; border-radius: 99px; font-weight: 600; }
+.device-card .badge-soft::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.device-card .vpn-link:hover, .device-card .ad-link:hover { color: var(--primary); text-decoration: underline; }
+
+.device-card .dc-exams { font-weight: 600; color: var(--text-light); margin-top: .15rem; }
+.device-card .med-indicators { border-top: 0; padding-top: .2rem; margin-top: .35rem; }
+.device-card .med-indicators .mi { border-radius: 99px; }
+.device-card .client-chip .chip { border: 1px solid var(--border); border-radius: 99px; }
+
+.device-card .device-metrics { margin-top: .4rem; padding-top: .35rem; }
+.device-card .metric-icon { width: .9rem; font-size: .6rem; }
+.device-card .metric-track { height: 5px; }
+.device-card .metric-value { min-width: 2.4rem; }
+
+/* ==========================================================================
+   Медицинская тема — детальная страница киоска
+   ========================================================================== */
+
+.detail-hero {
+    position: relative; overflow: hidden; border-radius: 18px;
+    background: linear-gradient(135deg, #134e4a 0%, #0f766e 55%, #0d9488 100%);
+    color: #fff; padding: 1.25rem 1.5rem;
+    box-shadow: 0 10px 30px rgba(13, 148, 136, .25);
+}
+.detail-hero::after {
+    content: ''; position: absolute; right: -60px; top: -90px; width: 260px; height: 260px;
+    border-radius: 50%; background: radial-gradient(circle, rgba(153, 246, 228, .30), transparent 70%);
+}
+.detail-hero .hero-ecg { position: absolute; left: 0; right: 0; bottom: 0; height: 28px; opacity: .35; pointer-events: none; }
+.detail-hero h1 { font-size: 1.55rem; font-weight: 700; color: #fff; margin: 0; letter-spacing: -.3px; }
+.detail-hero .hostname-glare { color: rgba(255,255,255,.85); }
+.detail-hero .status-badge {
+    display: inline-flex; align-items: center; gap: .35rem; border-radius: 99px; padding: 3px 12px;
+    font-size: .72rem; font-weight: 600; background: rgba(255,255,255,.16); color: #fff;
+}
+.detail-hero .status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.detail-hero .status-badge.success { color: #d1fae5; }
+.detail-hero .status-badge.danger { color: #fecaca; }
+.detail-hero .hero-facts { display: flex; flex-wrap: wrap; gap: .35rem 1.1rem; font-size: .78rem; opacity: .92; position: relative; z-index: 1; }
+.detail-hero .hero-facts b { font-weight: 600; }
+.detail-hero .hero-actions { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: .5rem; }
+.detail-hero .hero-btn {
+    display: inline-flex; align-items: center; gap: .4rem; border: 1px solid rgba(255,255,255,.4);
+    color: #fff; border-radius: 99px; padding: 5px 14px; font-size: .78rem; text-decoration: none; transition: all .2s;
+}
+.detail-hero .hero-btn:hover { background: rgba(255,255,255,.16); color: #fff; }
+
+.info-card .card-header { border-left: 4px solid var(--primary); font-weight: 600; }
+.info-card .card-body .kv td { padding: .18rem .25rem; }
+.info-card .card-body .kv td.k { color: var(--text-light); width: 46%; }
+.info-card .card-body .kv td.v { font-weight: 600; text-align: right; word-break: break-word; }
+
+.d-section-title {
+    display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem;
+    font-weight: 700; color: var(--text); letter-spacing: -.2px;
+}
+.d-section-title .ico { width: 30px; height: 30px; border-radius: 10px; display: inline-flex; align-items: center;
+    justify-content: center; background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); flex: none; }
+
+/* ==========================================================================
    Клиенты
    ========================================================================== */
 

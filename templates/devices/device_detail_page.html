@@ -10,34 +10,37 @@
     {% endfor %}
 {% endif %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>
-        <i class="bi bi-cpu"></i> {{ device.hostname }}
-        {% if device.in_repair %}
-            <span class="badge bg-warning text-dark ms-2">В ремонте</span>
-        {% elif device.is_online %}
-            <span class="badge bg-success ms-2">Онлайн</span>
-        {% else %}
-            <span class="badge bg-danger ms-2">Оффлайн {% if device.offline_duration %}({{ device.offline_duration }}){% endif %}</span>
-        {% endif %}
-    </h1>
-    <div>
-        <a href="{% url 'export_device_report' device.pk %}" class="btn btn-outline-primary btn-sm me-2">
-            <i class="bi bi-file-earmark-excel"></i> Сводка Excel
-        </a>
-        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left"></i> Дашборд
-        </a>
+<div class="detail-hero mb-4">
+    <svg class="hero-ecg" viewBox="0 0 200 28" preserveAspectRatio="none" aria-hidden="true"><path d="M0 15 L36 15 L42 7 L49 24 L56 11 L64 16 L84 16 L90 11 L98 22 L112 22 L124 10 L138 18 L146 18 L156 8 L166 15 L200 15" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 position-relative" style="z-index:1;">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                <h1><i class="bi bi-activity"></i> Киоск {{ device.hostname }}</h1>
+                <span class="status-badge {% if device.in_repair %}danger{% elif device.is_online %}success{% else %}danger{% endif %}">
+                    {% if device.in_repair %}Ремонт{% elif device.is_online %}Онлайн{% else %}Оффлайн{% if device.offline_duration %}, {{ device.offline_duration }}{% endif %}{% endif %}
+                </span>
+            </div>
+            <div class="hero-facts">
+                <span>ОС: <b>{{ device.os|default:"—" }}</b></span>
+                <span>ПО: <b>{{ device.software|default:"—" }}</b></span>
+                <span>Аптайм: <b>{{ device.uptime_formatted|default:device.uptime|default:"—" }}</b></span>
+                <span>SN: <b>{{ device.sn|default:"—" }}</b></span>
+            </div>
+        </div>
+        <div class="hero-actions">
+            <a href="{% url 'export_device_report' device.pk %}" class="hero-btn"><i class="bi bi-file-earmark-excel"></i> Сводка</a>
+            <a href="{% url 'dashboard' %}" class="hero-btn"><i class="bi bi-arrow-left"></i> Дашборд</a>
+        </div>
     </div>
 </div>
 
 <div class="row g-4 mb-4">
     <!-- Система -->
     <div class="col-md-4">
-        <div class="card h-100">
+        <div class="card h-100 info-card">
             <div class="card-header"><i class="bi bi-pc-display"></i> Система</div>
             <div class="card-body">
-                <table class="table table-sm table-borderless">
+                <table class="table table-sm table-borderless kv">
                     <tr><td class="text-muted">Hostname</td><td class="fw-bold">{{ device.hostname }}</td></tr>
                     <tr><td class="text-muted">ОС</td><td>{{ device.os }}</td></tr>
                     <tr><td class="text-muted">Ядро</td><td>{{ device.kernel }}</td></tr>
@@ -64,10 +67,10 @@
 
     <!-- Сеть -->
     <div class="col-md-4">
-        <div class="card h-100">
+        <div class="card h-100 info-card">
             <div class="card-header"><i class="bi bi-wifi"></i> Сеть и доступ</div>
             <div class="card-body">
-                <table class="table table-sm table-borderless">
+                <table class="table table-sm table-borderless kv">
                     <tr>
                         <td class="text-muted">VPN IP</td>
                         <td><strong>{{ device.vpn_ip|default:"—" }}</strong></td>
@@ -99,10 +102,10 @@
 
     <!-- Ресурсы -->
     <div class="col-md-4">
-        <div class="card h-100">
+        <div class="card h-100 info-card">
             <div class="card-header"><i class="bi bi-speedometer2"></i> Ресурсы</div>
             <div class="card-body">
-                <table class="table table-sm table-borderless">
+                <table class="table table-sm table-borderless kv">
                     <tr><td class="text-muted">CPU</td><td>{% if device.cpu_load %}{{ device.cpu_load }}%{% else %}—{% endif %}</td></tr>
                     <tr><td class="text-muted">RAM</td><td>{% if device.memory_percent %}{{ device.memory_percent }}%{% else %}—{% endif %}</td></tr>
                     <tr><td class="text-muted">Диск</td><td>{% if device.hdd_percent %}{{ device.hdd_percent }}% ({{ device.hdd|floatformat:1 }}/{{ device.hdd_total|floatformat:1 }} ГБ){% else %}—{% endif %}</td></tr>
