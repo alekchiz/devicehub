@@ -619,6 +619,55 @@ class AdminPagesTests(TestCase):
         return buf.getvalue()
 
 
+class ExamIngestTests(TestCase):
+    def setUp(self):
+        self.device = Device.objects.create(hostname='123')
+
+    def test_extract_day_date(self):
+        from devices.exam_ingest import extract_day_date
+        self.assertEqual(extract_day_date('pak/day/2026-09-05'), '2026-09-05')
+        self.assertEqual(extract_day_date('client/day/2026-09-05'), '2026-09-05')
+        self.assertIsNone(extract_day_date('client/status'))
+
+    def test_ingest_updates_existing_device(self):
+        from devices.exam_ingest import ingest_day_snapshot
+        payload = {
+            'date': '2026-09-05',
+            'items': [{
+                'sn': '123',
+                'exams': 12,
+                'cancelled': 1,
+                'client': 'РТК - ДВ',
+                'orgunit': 'с. Хороль, ул. Ленинская, 50 б',
+                'last_exam': '2026-09-05T13:04:00+03:00',
+            }],
+        }
+        count = ingest_day_snapshot(payload, 'pak/day/2026-09-05')
+        self.assertEqual(count, 1)
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.exam_count, 12)
+        self.assertIsNotNone(self.device.client)
+        self.assertEqual(self.device.client.name, 'РТК - ДВ')
+        self.assertEqual(self.device.location.name, 'с. Хороль, ул. Ленинская, 50 б')
+        daily = self.device.daily_exams.get(date=timezone.localdate())
+        self.assertEqual(daily.exams, 12)
+        self.assertEqual(daily.cancelled, 1)
+
+    def test_ingest_creates_unknown_device(self):
+        from devices.exam_ingest import ingest_day_snapshot
+        payload = {'date': '2026-09-05', 'items': [{'sn': '99999', 'exams': 7}]}
+        count = ingest_day_snapshot(payload)
+        self.assertEqual(count, 1)
+        dev = Device.objects.get(hostname='99999')
+        self.assertEqual(dev.exam_count, 7)
+
+    def test_ingest_ignores_bad_payload(self):
+        from devices.exam_ingest import ingest_day_snapshot
+        self.assertEqual(ingest_day_snapshot({}), 0)
+        self.assertEqual(ingest_day_snapshot({'date': 'not-a-date', 'items': []}), 0)
+        self.assertEqual(ingest_day_snapshot(None), 0)
+
+
 @override_settings(DEVICE_SSH_PASSWORD='global-pass', DEVICE_SSH_PASSWORDS=['backup-pass'])
 class SshHelperTests(TestCase):
     def setUp(self):

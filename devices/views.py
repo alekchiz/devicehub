@@ -399,6 +399,7 @@ def device_detail_page(request, pk):
     shipments = Shipment.objects.filter(device=device).order_by('-created_at')[:10]
     events = device.events.all()[:10]
     verifications = device.verifications.all()[:10]
+    daily_exams = device.daily_exams.all()[:10]
     
     context = {
         'device': device,
@@ -407,6 +408,7 @@ def device_detail_page(request, pk):
         'shipments': shipments,
         'events': events,
         'verifications': verifications,
+        'daily_exams': daily_exams,
     }
     return render(request, 'devices/device_detail_page.html', context)
 

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Owner, Location, Client, Contact, Device, Repair, Verification, DeviceEvent
+from .models import Owner, Location, Client, Contact, Device, Repair, Verification, DeviceEvent, DailyExam
 from .admin_views import analytics_view, import_view
 
 
@@ -93,6 +93,25 @@ class DeviceEventAdmin(admin.ModelAdmin):
     search_fields = ('device__hostname', 'message')
     list_select_related = ('device',)
     readonly_fields = ('device', 'event', 'message', 'created_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(DailyExam)
+class DailyExamAdmin(admin.ModelAdmin):
+    list_display = ('device', 'date', 'exams', 'cancelled', 'last_exam')
+    list_filter = ('date',)
+    search_fields = ('device__hostname', 'client', 'orgunit')
+    list_select_related = ('device',)
+    list_per_page = 25
+    readonly_fields = ('device', 'date', 'exams', 'cancelled', 'group', 'client', 'orgunit', 'last_exam')
 
     def has_add_permission(self, request):
         return False

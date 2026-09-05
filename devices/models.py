@@ -239,3 +239,25 @@ class DeviceEvent(models.Model):
         ordering = ['-created_at']
         verbose_name = "Событие"
         verbose_name_plural = "События киосков"
+
+
+class DailyExam(models.Model):
+    """Снимок осмотров ПАК за сутки (приходит по MQTT в topic */*/day/date)."""
+    device = models.ForeignKey(Device, on_delete=models.CASCADE,
+                               related_name='daily_exams', verbose_name="Киоск")
+    date = models.DateField(verbose_name="Дата")
+    exams = models.IntegerField(default=0, verbose_name="Осмотров")
+    cancelled = models.IntegerField(default=0, verbose_name="Отменено")
+    group = models.CharField(max_length=50, blank=True, verbose_name="Группа")
+    client = models.CharField(max_length=200, blank=True, verbose_name="Объект")
+    orgunit = models.CharField(max_length=300, blank=True, verbose_name="Местоположение")
+    last_exam = models.DateTimeField(null=True, blank=True, verbose_name="Последний осмотр")
+
+    def __str__(self):
+        return f"{self.device.hostname} {self.date} — {self.exams}"
+
+    class Meta:
+        unique_together = ('device', 'date')
+        ordering = ['-date', 'device__hostname']
+        verbose_name = "Осмотры за сутки"
+        verbose_name_plural = "Осмотры за сутки"

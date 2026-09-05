@@ -7,6 +7,7 @@ from devices.models import Device
 from devices.models import log_device_event
 from devices.notifications import notify_device_status, run_verification_reminders
 from devices.mqtt_utils import safe_str, safe_float, numeric_hostname, check_offline_devices
+from devices.exam_ingest import extract_day_date, ingest_day_snapshot
 
 MQTT_BROKER = settings.MQTT_BROKER
 MQTT_PORT = settings.MQTT_PORT
@@ -25,6 +26,13 @@ def on_message(client, userdata, msg):
             return
 
         payload = json.loads(msg.payload.decode('utf-8'))
+
+        # Суточный снимок осмотров: …*/day/YYYY-MM-DD
+        day_date = extract_day_date(msg.topic)
+        if day_date:
+            processed = ingest_day_snapshot(payload, day_date)
+            print(f"📊 Осмотры ПАК за {day_date}: {processed} киосков")
+            return
 
         host = payload.get('host') or payload.get('hostname') or 'unknown'
         host = numeric_hostname(host)
