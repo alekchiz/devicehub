@@ -2,6 +2,7 @@ import subprocess
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
+import re
 from django.http import JsonResponse
 from django.db.models import Q, Count, Sum
 from .models import Device, Owner, Client, Location, Repair, Verification, DeviceEvent, DailyExam
@@ -181,7 +182,7 @@ def dashboard(request):
     query = request.GET.get('q', '')
     status_filter = request.GET.get('status', '')
 
-    all_devices = Device.objects.filter(hostname__regex=r'^\d{3,}$')
+    all_devices = Device.objects.all()
     devices = all_devices
 
     if query:
@@ -239,6 +240,8 @@ def dashboard(request):
     device_list = list(
         devices.order_by('hostname').select_related('owner', 'client', 'location')
     )
+    for d in device_list:
+        d.is_standard = bool(re.fullmatch(r'\d{3,}', d.hostname or ''))
 
     if problems_filter:
         device_list = [d for d in device_list if _is_problem(d)]

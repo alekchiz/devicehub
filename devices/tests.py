@@ -583,6 +583,17 @@ class ImportExamsTests(TestCase):
         self.assertContains(resp, 'за день 0')
 
 
+class DashboardNonstandardTests(TestCase):
+    def test_nonstandard_device_is_marked(self):
+        Device.objects.create(hostname='PC-FIELD-1', is_online=True)
+        self.client.force_login(_technician())
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'PC-FIELD-1')
+        self.assertContains(resp, 'nonstandard')
+        self.assertContains(resp, 'Новый')
+
+
 class AdminPagesTests(TestCase):
     def setUp(self):
         self.device = Device.objects.create(hostname='123', sn='SN-0001')

@@ -582,6 +582,22 @@ body {
 .device-card .metric-track { height: 5px; }
 .device-card .metric-value { min-width: 2.4rem; }
 
+/* Нестандартные киоски (прилетели по телеметрии, но номер не числовой) */
+.device-card.nonstandard {
+    --status-tint: #faf5ff; --status-glow: rgba(124, 58, 237, .14);
+    border: 1px dashed #c4b5fd;
+}
+[data-theme="dark"] .device-card.nonstandard {
+    --status-tint: #241a3d; --status-glow: rgba(167, 139, 250, .16);
+    border-color: #6d28d9;
+}
+.device-card.nonstandard .dc-ecg .ecg-line { stroke: #8b5cf6; }
+.device-card .ns-badge {
+    display: inline-flex; align-items: center; gap: .25rem; flex: none;
+    font-size: .56rem; font-weight: 700; color: #7c3aed;
+    background: rgba(124, 58, 237, .12); border-radius: 99px; padding: 2px 7px;
+}
+
 /* ==========================================================================
    Медицинская тема — детальная страница киоска
    ========================================================================== */

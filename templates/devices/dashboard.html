@@ -189,7 +189,7 @@
 <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-4 row-cols-xl-5 g-3">
 {% for device in devices %}
     <div class="col">
-        <div class="device-card card h-100 {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}" data-device-id="{{ device.pk }}">
+        <div class="device-card card h-100 {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}{% if not device.is_standard %} nonstandard{% endif %}" data-device-id="{{ device.pk }}"{% if not device.is_standard %} data-ns="1"{% endif %}>
             <button type="button" class="device-expand" onclick="event.stopPropagation();toggleDeviceMetrics({{ device.pk }})"
                     title="Детальные метрики" aria-label="Детальные метрики">
                 <i class="bi bi-graph-up" id="expIco-{{ device.pk }}"></i>
@@ -197,7 +197,10 @@
             <div class="card-body" onclick="window.location='{% url 'device_detail_page' device.pk %}'">
                 <div class="dc-ecg" aria-hidden="true"><svg viewBox="0 0 120 20" preserveAspectRatio="none"><path class="ecg-line" d="M0 11 L20 11 L24 5 L29 17 L34 8 L40 12 L50 12 L55 8 L61 15 L70 15 L80 7 L90 13 L96 13 L103 5 L110 11 L120 11"/></svg></div>
                 <div class="dc-top">
-                    <span class="hostname text-truncate" style="min-width:0;">{{ device.hostname }}</span>
+                    <div class="d-flex align-items-center gap-1" style="min-width:0;">
+                        <span class="hostname text-truncate" style="min-width:0;">{{ device.hostname }}</span>
+                        {% if not device.is_standard %}<span class="ns-badge"><i class="bi bi-stars"></i> Новый</span>{% endif %}
+                    </div>
                     <div class="d-flex align-items-center gap-1">
                         <span class="badge-soft {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}" id="badge-{{ device.pk }}">
                             {% if device.in_repair %}🔧 Ремонт{% elif device.is_online %}🟢 Онлайн{% else %}🔴 Оффлайн{% endif %}
@@ -429,6 +432,7 @@ function applyStatus(payload) {
         var d = payload.devices[id];
 
         card.className = 'device-card card h-100 ' + (d.in_repair ? 'repair' : (d.online ? 'online' : 'offline'));
+        if (card.getAttribute('data-ns') === '1') card.className += ' nonstandard';
 
         var badge = document.getElementById('badge-' + id);
         if (badge) {
