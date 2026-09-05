@@ -7,7 +7,7 @@ from tickets.models import Ticket
 from bot.services import (
     create_user_sync, is_phone_allowed, get_device_by_hostname,
     create_ticket_sync, get_my_tickets_sync, update_ticket_sync, can_edit_ticket_sync,
-    get_menu_stats_sync,
+    get_menu_stats_sync, change_password_sync,
 )
 
 
@@ -23,6 +23,29 @@ class BotServicesTests(TestCase):
         self.assertEqual(user.profile.role, 'technician')
         self.assertEqual(user.profile.telegram_id, 999)
         self.assertEqual(user.profile.phone, '+79990000000')
+
+    def test_change_password_sync(self):
+        create_user_sync('pasha', 'old-pass', 777, '+79991112233')
+
+        ok, err = change_password_sync(777, 'wrong-old', 'new-pass-123')
+        self.assertFalse(ok)
+        self.assertIn('текущий пароль', err.lower())
+
+        ok, err = change_password_sync(777, 'old-pass', 'short')
+        self.assertFalse(ok)
+        self.assertIn('6 символов', err.lower())
+
+        ok, err = change_password_sync(777, 'old-pass', 'new-pass-123')
+        self.assertTrue(ok)
+        self.assertEqual(err, '')
+        user = User.objects.get(profile__telegram_id=777)
+        self.assertTrue(user.check_password('new-pass-123'))
+        self.assertFalse(user.check_password('old-pass'))
+
+    def test_change_password_sync_unlinked(self):
+        ok, err = change_password_sync(424242, 'x', 'new-pass-123')
+        self.assertFalse(ok)
+        self.assertIn('не привязан', err.lower())
 
     def test_phone_whitelist(self):
         WhitelistPhone.objects.create(phone='+71111111111', is_active=True)

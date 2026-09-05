@@ -33,6 +33,20 @@ def link_telegram_sync(user, telegram_id):
     user.profile.telegram_id = telegram_id
     user.profile.save()
 
+def change_password_sync(telegram_id, current_password, new_password):
+    """Меняет пароль привязанного аккаунта. Возвращает (ok, error)."""
+    try:
+        user = User.objects.select_related('profile').get(profile__telegram_id=telegram_id)
+    except User.DoesNotExist:
+        return False, 'Аккаунт не привязан к Telegram.'
+    if not user.check_password(current_password):
+        return False, 'Неверный текущий пароль.'
+    if not new_password or len(new_password) < 6:
+        return False, 'Пароль слишком короткий. Минимум 6 символов.'
+    user.set_password(new_password)
+    user.save()
+    return True, ''
+
 def is_phone_allowed(phone):
     return WhitelistPhone.objects.filter(phone=phone, is_active=True).exists()
 

@@ -476,3 +476,63 @@ class VerificationTests(TestCase):
 
         self.assertEqual(run_verification_reminders(), 0)  # повторно не шлём
         self.assertEqual(mock_urlopen.call_count, 1)
+
+
+class UptimeTests(TestCase):
+    def setUp(self):
+        self.device = Device.objects.create(hostname='123')
+        self.now = timezone.now()
+
+    def _event(self, kind, timestamp):
+        ev = DeviceEvent.objects.create(device=self.device, event=kind)
+        DeviceEvent.objects.filter(pk=ev.pk).update(created_at=timestamp)
+        return ev
+
+    def test_no_events_is_zero(self):
+        from devices.analytics import device_uptime
+        start = self.now - timedelta(days=7)
+        self.assertEqual(device_uptime(self.device, start, self.now), 0.0)
+
+    def test_online_before_start_full_period(self):
+        from devices.analytics import device_uptime
+        start = self.now - timedelta(days=7)
+        self._event('online', start)
+        self.assertEqual(device_uptime(self.device, start, self.now), 1.0)
+
+    def test_half_online_half_offline(self):
+        from devices.analytics import device_uptime
+        start = self.now - timedelta(days=7)
+        half = start + timedelta(days=3.5)
+        self._event('offline', start)
+        self._event('online', half)
+        result = device_uptime(self.device, start, self.now)
+        self.assertAlmostEqual(result, 0.5, places=3)
+
+    def test_state_before_period_used(self):
+        from devices.analytics import device_uptime
+        start = self.now - timedelta(days=7)
+        # киоск был онлайн до периода, оффлайн только в середине периода
+        self._event('online', start - timedelta(days=1))
+        self._event('offline', start + timedelta(days=3.5))
+        result = device_uptime(self.device, start, self.now)
+        self.assertAlmostEqual(result, 0.5, places=3)
+
+    def test_analytics_page_requires_login(self):
+        resp = self.client.get(reverse('analytics'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp.url)
+
+    def test_analytics_page_renders(self):
+        self.client.force_login(_technician())
+        self._event('online', self.now - timedelta(minutes=1))
+        resp = self.client.get(reverse('analytics'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Доступность киосков')
+        self.assertContains(resp, '123')
+        self.assertContains(resp, 'Неделя')
+
+    def test_analytics_page_month_period(self):
+        self.client.force_login(_technician())
+        resp = self.client.get(reverse('analytics') + '?period=month')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '30 дней')

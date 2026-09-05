@@ -11,6 +11,7 @@ venv/
 staticfiles/
 *.log
 db.sqlite3
+backups/
 
 # Редакторы / ОС
 .DS_Store

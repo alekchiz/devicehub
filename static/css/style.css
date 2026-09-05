@@ -501,6 +501,11 @@ body {
 .repair-progress .rp-track { height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 0.25rem; }
 .repair-progress .rp-fill { height: 100%; background: var(--warning); border-radius: 99px; }
 
+/* Полоса доступности на странице аналитики */
+.rp-track .rp-fill.is-good { background: var(--success); }
+.rp-track .rp-fill.is-warn { background: var(--warning); }
+.rp-track .rp-fill.is-bad { background: var(--danger); }
+
 .client-chip { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0.5rem 0 0.25rem; }
 .client-chip .chip {
     display: inline-flex; align-items: center; gap: 0.25rem;

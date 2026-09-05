@@ -21,6 +21,10 @@ from bot.handlers.users import (
     add_user_start, add_user_username, add_user_password, add_user_role,
     unlink_command, ADD_USERNAME, ADD_PASSWORD, ADD_ROLE,
 )
+from bot.handlers.password import (
+    password_start, password_current, password_new, password_confirm,
+    CURRENT_PW, NEW_PW, CONFIRM_PW,
+)
 from telegram import Update
 from telegram.ext import ContextTypes
 from asgiref.sync import sync_to_async
@@ -43,6 +47,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/edit - Редактировать заявку\n"
             "/register - Регистрация\n"
             "/link - Привязать аккаунт\n"
+            "/password - Сменить пароль (в личке)\n"
             "/adduser - Добавить пользователя (при наличии права)\n"
             "/unlink - Отвязать аккаунт от Telegram",
             parse_mode='HTML'
@@ -173,6 +178,16 @@ class Command(BaseCommand):
             },
             fallbacks=[CommandHandler('cancel', cancel)],
         )
+
+        password_handler = ConversationHandler(
+            entry_points=[CommandHandler('password', password_start)],
+            states={
+                CURRENT_PW: [MessageHandler(filters.TEXT & ~filters.COMMAND, password_current)],
+                NEW_PW: [MessageHandler(filters.TEXT & ~filters.COMMAND, password_new)],
+                CONFIRM_PW: [MessageHandler(filters.TEXT & ~filters.COMMAND, password_confirm)],
+            },
+            fallbacks=[CommandHandler('cancel', cancel)],
+        )
         
         callback_handler = CallbackQueryHandler(button_router)
         
@@ -185,6 +200,7 @@ class Command(BaseCommand):
         app.add_handler(edit_handler)
         app.add_handler(status_handler)
         app.add_handler(adduser_handler)
+        app.add_handler(password_handler)
         app.add_handler(CommandHandler('unlink', unlink_command))
         app.add_handler(callback_handler)
         app.add_handler(CommandHandler('health', health_command))
@@ -197,6 +213,7 @@ class Command(BaseCommand):
                 BotCommand('edit', '📝 Редактировать заявку'),
                 BotCommand('register', '📝 Регистрация'),
                 BotCommand('link', '🔗 Привязать аккаунт'),
+                BotCommand('password', '🔐 Сменить пароль'),
                 BotCommand('adduser', '➕ Добавить пользователя (для админов)'),
                 BotCommand('unlink', '🔗 Отвязать Telegram'),
             ])

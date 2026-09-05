@@ -222,6 +222,49 @@ def reports_page(request):
 
 
 @login_required
+def analytics_uptime(request):
+    """Доступность киосков за период (неделя/месяц) из истории событий."""
+    from devices.analytics import device_uptime
+
+    period = 'month' if request.GET.get('period') == 'month' else 'week'
+    days = 30 if period == 'month' else 7
+    sort = 'pct' if request.GET.get('sort') != 'hostname' else 'hostname'
+
+    end = timezone.now()
+    start = end - timedelta(days=days)
+    total_seconds = (end - start).total_seconds()
+
+    devices = Device.objects.filter(hostname__regex=r'^\d{3,}$').order_by('hostname')
+    rows = []
+    for d in devices:
+        fraction = device_uptime(d, start, end)
+        rows.append({
+            'device': d,
+            'pct': round(fraction * 100, 1),
+            'online_h': round(total_seconds * fraction / 3600, 1),
+            'offline_h': round(total_seconds * (1 - fraction) / 3600, 1),
+        })
+
+    if sort == 'pct':
+        rows.sort(key=lambda r: (r['pct'], r['device'].hostname))
+    else:
+        rows.sort(key=lambda r: r['device'].hostname)
+
+    avg = round(sum(r['pct'] for r in rows) / len(rows), 1) if rows else 0.0
+    return render(request, 'devices/analytics.html', {
+        'rows': rows,
+        'period': period,
+        'sort': sort,
+        'period_days': days,
+        'total': len(rows),
+        'avg_uptime': avg,
+        'healthy': sum(1 for r in rows if r['pct'] >= 99.0),
+        'warn': sum(1 for r in rows if 90.0 <= r['pct'] < 99.0),
+        'critical': sum(1 for r in rows if r['pct'] < 90.0),
+    })
+
+
+@login_required
 def device_history(request):
     """Страница истории событий киосков (аудит)."""
     events = DeviceEvent.objects.select_related('device')
