@@ -235,9 +235,7 @@
                     <span class="mi {{ device.tono_ok|yesno:'ok,err' }}" title="Тонометр: {{ device.tono_ok|yesno:'подключён,проблема' }}"><i class="bi bi-heart-pulse"></i> Тоно</span>
                 </div>
                 {% with total_all=all_total|get_item:device.pk latest_day=today_exams|get_item:device.pk %}
-                {% if total_all or device.exam_count or latest_day %}
-                <div class="meta"><i class="bi bi-clipboard-check"></i> Осмотры: всего {% if total_all %}{{ total_all }}{% elif device.exam_count %}{{ device.exam_count }}{% else %}—{% endif %} · за день {% if latest_day %}{{ latest_day }}{% else %}—{% endif %}</div>
-                {% endif %}
+                <div class="meta"><i class="bi bi-clipboard-check"></i> Осмотры: всего {% if total_all is not None %}{{ total_all }}{% elif device.exam_count is not None %}{{ device.exam_count }}{% else %}—{% endif %} · за день {% if latest_day is not None %}{{ latest_day }}{% else %}0{% endif %}</div>
                 {% endwith %}
                 {% with vs=verif_states|get_item:device.pk %}
                 {% if vs %}

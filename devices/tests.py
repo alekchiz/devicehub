@@ -577,6 +577,11 @@ class ImportExamsTests(TestCase):
         self.assertContains(resp, 'всего 512')
         self.assertContains(resp, 'за день 512')
 
+    def test_dashboard_shows_zero_day_when_no_data(self):
+        self.client.force_login(_technician())
+        resp = self.client.get(reverse('dashboard'))
+        self.assertContains(resp, 'за день 0')
+
 
 class AdminPagesTests(TestCase):
     def setUp(self):
