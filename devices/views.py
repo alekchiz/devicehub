@@ -278,6 +278,13 @@ def dashboard(request):
             _latest_exams=Subquery(latest_snapshot.values('exams')[:1]),
         ).values_list('pk', '_latest_exams')
     )
+    # Агрегаты за сегодняшние московские сутки (для шапки дашборда).
+    today = timezone.localdate()
+    today_qs = DailyExam.objects.filter(date=today)
+    today_agg = today_qs.aggregate(exams=Sum('exams'), cancelled=Sum('cancelled'))
+    today_exams_total = today_agg['exams'] or 0
+    today_cancelled_total = today_agg['cancelled'] or 0
+    today_paks_count = today_qs.values('device_id').distinct().count()
 
     if repair_count:
         page_status = 'repair'
@@ -323,6 +330,9 @@ def dashboard(request):
         'today_exams': today_exams,
         'verif_expired': v_expired,
         'verif_soon': v_soon,
+        'today_exams_total': today_exams_total,
+        'today_cancelled_total': today_cancelled_total,
+        'today_paks_count': today_paks_count,
         'problems_count': problems_count,
         'problems_filter': problems_filter,
         'problems_chip': build_qs(request, problems='1'),

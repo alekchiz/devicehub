@@ -582,6 +582,26 @@ class ImportExamsTests(TestCase):
         resp = self.client.get(reverse('dashboard'))
         self.assertContains(resp, 'за день 0')
 
+    def test_dashboard_shows_today_exam_aggregates(self):
+        from devices.models import DailyExam
+        self.client.force_login(_technician())
+        today = timezone.localdate()
+        d1 = Device.objects.get(hostname='123')
+        d2 = Device.objects.create(hostname='456')
+        DailyExam.objects.create(device=d1, date=today, exams=10, cancelled=2)
+        DailyExam.objects.create(device=d2, date=today, exams=5, cancelled=1)
+        # Вчерашний снимок не должен попадать в «сегодня».
+        DailyExam.objects.create(
+            device=d1, date=today - timedelta(days=1), exams=999, cancelled=999
+        )
+        resp = self.client.get(reverse('dashboard'))
+        self.assertContains(resp, 'Осмотров сегодня')
+        self.assertContains(resp, 'Отменено сегодня')
+        self.assertContains(resp, 'ПАК отчиталось')
+        self.assertContains(resp, 'id="examsToday">15')      # 10 + 5 осмотров
+        self.assertContains(resp, 'id="cancelledToday">3')   # 2 + 1 отменено
+        self.assertContains(resp, 'id="paksToday">2')        # отчиталось 2 ПАК
+
 
 class DashboardNonstandardTests(TestCase):
     def test_nonstandard_device_is_marked(self):
