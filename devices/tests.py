@@ -803,6 +803,8 @@ class SshHelperTests(TestCase):
         ok, msg = ssh_change_password(self.device, 'Pochta@medQaZ')
         self.assertTrue(ok)
         self.assertEqual(m.call_count, 1)  # рабочий пароль — с первого раза
+        self.device.refresh_from_db()
+        self.assertTrue(self.device.password_migrated)
 
     @patch('devices.views.subprocess.run')
     def test_change_password_falls_back_when_first_wrong(self, m):
@@ -844,6 +846,8 @@ class SshHelperTests(TestCase):
         from devices.views import ssh_change_password
         ok, msg = ssh_change_password(self.device, 'NewPass123')
         self.assertTrue(ok)
+        self.device.refresh_from_db()
+        self.assertTrue(self.device.password_migrated)
 
 
 @override_settings(DEVICE_SSH_PASSWORD='Pochta@medQaZ',

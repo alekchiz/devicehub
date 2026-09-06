@@ -218,8 +218,9 @@ def ssh_change_password(device, new_password):
     Вход по SSH — паролем из списка входа; sudo — своим sudo-паролем
     (или тем же, если отдельный не задан). После смены пароля в authorized_keys
     пользователя terminal добавляются публичные ключи из DEVICE_SSH_PUBLIC_KEYS
-    (сервер и личные, например с Мака), чтобы не терять доступ. Новый пароль
-    не должен быть пустым.
+    (сервер и личные, например с Мака), чтобы не терять доступ. При успехе
+    ставится флаг device.password_migrated (бейдж на карточке дашборда).
+    Новый пароль не должен быть пустым.
     """
     if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
         return False, 'SSH: у киоска нет VPN IP'
@@ -242,6 +243,7 @@ def ssh_change_password(device, new_password):
                       sudo_cmd=change_cmd)
     if result.returncode != 0:
         return False, result.stderr.strip() or 'Ошибка смены пароля'
+    Device.objects.filter(pk=device.pk).update(password_migrated=True)
     return True, 'Пароль киоска изменён'
 
 @login_required
