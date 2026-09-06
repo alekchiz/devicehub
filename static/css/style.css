@@ -390,21 +390,6 @@ body {
 .status-chip .c-dot.problems { background: var(--danger); }
 .status-chip.sm { padding: 0.2rem 0.55rem; font-size: 0.7rem; }
 
-/* Действия на карточке */
-.dc-form { margin: 0; display: inline-flex; }
-.dc-btn {
-    border: 1px solid var(--border);
-    background: var(--badge-light-bg);
-    color: var(--badge-light-text);
-    width: 26px; height: 26px;
-    border-radius: 8px;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 0.85rem;
-    transition: all 0.2s;
-    cursor: pointer;
-}
-.dc-btn:hover { color: var(--primary); border-color: var(--primary); background: var(--stat-total-bg); }
-
 /* Мини-график осмотров за неделю */
 .week-chart {
     display: flex; align-items: flex-end; gap: 0.9rem;

@@ -502,19 +502,6 @@ def device_status_feed(request):
 
     return JsonResponse(payload)
 
-
-@user_passes_test(is_admin)
-def device_reboot(request, pk):
-    """Перезагрузка одного киоска (кнопка на карточке дашборда)."""
-    device = get_object_or_404(Device, pk=pk)
-    result = ssh_reboot(device)
-    if result.returncode == 0:
-        messages.success(request, f'{device.hostname}: перезагрузка отправлена')
-    else:
-        messages.warning(
-            request, f'{device.hostname}: {result.stderr.strip() or "SSH недоступен"}')
-    return redirect('dashboard')
-
 def device_detail_modal(request, pk):
     device = get_object_or_404(Device, pk=pk)
     return render(request, 'devices/device_detail_modal.html', {'device': device})

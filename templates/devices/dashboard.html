@@ -230,14 +230,6 @@
                         <i class="bi bi-display"></i>{{ device.anydesk }}
                     </a>
                     {% endif %}
-                    {% if user.profile.role == 'admin' and device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
-                    <form method="post" action="{% url 'device_reboot' device.pk %}" class="dc-form"
-                          onclick="event.stopPropagation();"
-                          onsubmit="return confirm('Перезагрузить киоск {{ device.hostname }}?');">
-                        {% csrf_token %}
-                        <button type="submit" class="dc-btn" title="Перезагрузить"><i class="bi bi-arrow-clockwise"></i></button>
-                    </form>
-                    {% endif %}
                 </div>
                 {% endif %}
                 {% if device.client or device.location %}

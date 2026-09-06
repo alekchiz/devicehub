@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Телеметрия единственного киоска (Client) в МедКиоск.
-# Запускается на любом Ubuntu (20.04+). One-shot: публикует status на MQTT и выходит.
+# info2mqtt.py — телеметрия ПАК в МедКиоск (улучшенная версия).
+# Запускается на любой Ubuntu (Python 3.4+). One-shot: публикует status на MQTT и выходит.
 #
-# Установка (минимальная):
-#   sudo apt update && sudo apt install -y python3-paho-mqtt   # paho-mqtt для Python3
-#   sudo cp telemetry_agent.py /usr/local/bin/retail_agent.py
+# Установка зависимостей:
+#   sudo apt install -y python3-paho-mqtt || pip3 install paho-mqtt
 #
 # Запуск (вручную):
-#   python3 telemetry_agent.py
+#   python3 info2mqtt.py
 #
-# Установка по cron (раз в 5 минут):
-#   0,5,10,15,20,25,30,35,40,45,50,55 * * * * cd /opt/retail && MQTT_PASS=ваш_пароль python3 telemetry_agent.py >> /var/log/retail_agent.log 2>&1
+# cron (раз в 5 минут) — пароль только из окружения:
+#   0,5,10,15,20,25,30,35,40,45,50,55 * * * * cd /home/terminal/rtk && MQTT_PASS=пароль python3 info2mqtt.py >> /var/log/retail_agent.log 2>&1
 #
-# Переменные окружения (опционально):
+# Переменные окружения:
 #   MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASS — параметры подключения.
-#   MQTT_PASS обязателен: пароль читается только из окружения, в коде его нет.
-#   MQC_VERBOSE=1 — печатать весь JSON перед отправкой
+#   MQTT_PASS обязателен (в коде пароля нет).
+#   MQC_VERBOSE=1 — печатать весь JSON перед отправкой.
 
 from __future__ import print_function
 
@@ -30,17 +29,25 @@ import socket
 import time
 import subprocess
 
-import paho.mqtt.client as mqtt
-import paho.mqtt.publish as publish
+if sys.version_info < (3, 4):
+    print("Ошибка: требуется Python 3.4 или новее.")
+    sys.exit(1)
+
+try:
+    import paho.mqtt.client as mqtt
+    import paho.mqtt.publish as publish
+except ImportError:
+    print("Ошибка: не установлен paho-mqtt.\n"
+          "Выполните:  sudo apt install -y python3-paho-mqtt\n"
+          "или (если пакета нет на ваш Ubuntu):  pip3 install paho-mqtt")
+    sys.exit(1)
 
 
 # ---- MQTT settings (can be overridden by env) ----
 SERVER_IP = os.getenv("MQTT_HOST", "tihon.grigorenko.online")
 SERVER_PORT = int(os.getenv("MQTT_PORT", "1883"))
 MQTT_USER = os.getenv("MQTT_USER", "pak")
-# Пароль не должен попадать в код — он берётся только из окружения
-# (см. cron-запись с env MQTT_PASS). Пустой default не даст подключиться
-# молча с «секретом» из исходников.
+# Пароль читается только из окружения (напр. через MQTT_PASS в cron-записи).
 MQTT_PASS = os.getenv("MQTT_PASS", "")
 
 MQTT_PROTOCOL = mqtt.MQTTv311
@@ -50,37 +57,59 @@ VERBOSE = os.getenv("MQC_VERBOSE", "0") == "1"
 
 
 def get_terminal_output(command, timeout=5):
-    """Python 3.6-compatible subprocess helper."""
+    """Python-3.4+ compatible subprocess helper (без shell-инъекций намеренно shell)."""
+    if hasattr(subprocess, "run"):
+        try:
+            p = subprocess.run(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,  # == text=True in newer python
+                timeout=timeout,
+            )
+            return (p.stdout or "").strip()
+        except Exception:
+            return ""
+
+    # Fallback для очень старых Python (3.4 и ниже — нет subprocess.run)
     try:
-        p = subprocess.run(
-            command,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,  # == text=True in newer python
-            timeout=timeout,
+        proc = subprocess.Popen(
+            command, shell=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
-        return (p.stdout or "").strip()
+        try:
+            out, _ = proc.communicate(timeout=timeout)
+        except Exception:
+            proc.kill()
+            out, _ = proc.communicate()
+        if isinstance(out, bytes):
+            out = out.decode("utf-8", "replace")
+        return (out or "").strip()
     except Exception:
         return ""
 
 
 def pub(topic, client_id, payload):
-    try:
-        publish.single(
-            topic=topic,
-            payload=json.dumps(payload, ensure_ascii=False),
-            client_id=client_id,
-            hostname=SERVER_IP,
-            port=SERVER_PORT,
-            auth={"username": MQTT_USER, "password": MQTT_PASS},
-            protocol=MQTT_PROTOCOL,
-            qos=0,
-            keepalive=10,
-        )
-        return True
-    except Exception:
-        return False
+    data = json.dumps(payload, ensure_ascii=False)
+    for attempt in (1, 2):  # одна повторная попытка после короткой паузы
+        try:
+            publish.single(
+                topic=topic,
+                payload=data,
+                client_id=client_id,
+                hostname=SERVER_IP,
+                port=SERVER_PORT,
+                auth={"username": MQTT_USER, "password": MQTT_PASS},
+                protocol=MQTT_PROTOCOL,
+                qos=0,
+                keepalive=10,
+            )
+            return True
+        except Exception:
+            if attempt == 1:
+                time.sleep(2)
+    return False
 
 
 def read_first_existing_file(paths):
@@ -118,8 +147,7 @@ def get_serial_number():
 
 
 def get_software_version():
-    """Версия ПО по самому новому jar. Сортировка версионная, а не лексикографическая:
-    иначе 10.0.1 считался бы «старее» 9.9.9."""
+    """Версия ПО по самому новому jar (версионная сортировка, а не строковая)."""
     jar_path = "/home/terminal/rtk/rostelecom-app-*.jar"
     try:
         jar_files = glob.glob(jar_path)
@@ -145,8 +173,7 @@ def get_software_version():
 
 
 def get_secureboot_status():
-    """Учитывает отсутствие UEFI: на legacy BIOS Secure Boot недоступен (disabled),
-    а не «не установлен»."""
+    """Учитывает отсутствие UEFI: на legacy BIOS Secure Boot недоступен (disabled)."""
     if not os.path.exists("/sys/firmware/efi"):
         return "disabled"
 
@@ -252,16 +279,7 @@ def get_cpu_temperature():
 
 
 def get_thermometer_temperature():
-    """Реальное показание медицинского термометра.
-
-    Отсюда НЕ берётся температура CPU (для неё есть get_cpu_temperature и поле
-    cpu_temperature). Источник показаний термометра в ПАК пока не подключён —
-    до этого «температура» честно пустая, чтобы индикатор термометра не показывал
-    «данные есть» по CPU-значению.
-
-    TODO: читать измерение из приложения РТК (например, из
-    /home/terminal/rtk/logs/messages), когда станет известен формат строки.
-    """
+    """Реальное показание медицинского термометра (пока не подключено — пусто)."""
     return ""
 
 
@@ -380,9 +398,7 @@ def get_network_speed():
 
 
 def get_vpn_ip():
-    """Адрес VPN-интерфейса. Сначала известные имена, затем fallback по всем
-    интерфейсам (интерфейс может называться как угодно — без этого киоск
-    остаётся без SSH-доступа на сервере)."""
+    """Адрес VPN-интерфейса: известные имена, затем fallback по всем интерфейсам."""
     vpn_names = ("tun0", "wg0", "tap0", "ppp0", "vpn0")
     for dev in vpn_names:
         ip = get_terminal_output(
@@ -435,6 +451,8 @@ def make_mqtt_client_id(host, sn):
 def main():
     host = get_hostname()
     sn = get_serial_number()
+    if not MQTT_PASS:
+        print("WARN: MQTT_PASS не задан (из окружения) — публикация может не пройти")
 
     disk_free, disk_total, disk_percent = get_disk_info()
 
@@ -463,9 +481,7 @@ def main():
         "ver": "9",
     }
 
-    # ВАЖНО: серверный листенер пока игнорирует поля action/client_id —
-    # сообщение обрабатывается так же, как обычный status (update_or_create).
-    # Режим оставлен на будущее (провижининг по клиентскому ID).
+    # Серверный листенер обрабатывает --init так же, как status (update_or_create).
     topic = "client/status"
     if len(sys.argv) > 1 and sys.argv[1] == "--init":
         topic = "client/init"
