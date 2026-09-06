@@ -574,13 +574,12 @@ class ImportExamsTests(TestCase):
             exams=512,
         )
         resp = self.client.get(reverse('dashboard'))
-        self.assertContains(resp, 'всего 512')
-        self.assertContains(resp, 'за день 512')
+        self.assertContains(resp, 'Осмотров сегодня: 512')
 
     def test_dashboard_shows_zero_day_when_no_data(self):
         self.client.force_login(_technician())
         resp = self.client.get(reverse('dashboard'))
-        self.assertContains(resp, 'за день 0')
+        self.assertContains(resp, 'Осмотров сегодня: 0')
 
     def test_dashboard_shows_today_exam_aggregates(self):
         from devices.models import DailyExam

@@ -12,115 +12,107 @@
 
 <div class="container-fluid px-0">
 
-<!-- Статистика -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-sm-6 col-md-3">
-        <div class="stat-card">
-            <div class="card-body d-flex align-items-center p-3">
-                <div class="stat-icon total me-3"><i class="bi bi-cpu"></i></div>
-                <div>
-                    <div class="stat-value" id="statTotal">{{ total_count }}</div>
-                    <div class="stat-label">Киосков</div>
+<!-- ===== Шапка дашборда: сводка ===== -->
+<div class="filter-card card mb-3">
+    <div class="card-body p-3 p-md-4">
+        <div class="row g-2 g-md-3">
+            <div class="col-6 col-sm-4 col-md-3">
+                <div class="stat-card">
+                    <div class="card-body d-flex align-items-center p-3">
+                        <div class="stat-icon total me-3"><i class="bi bi-cpu"></i></div>
+                        <div>
+                            <div class="stat-value" id="statTotal">{{ total_count }}</div>
+                            <div class="stat-label">Киосков</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4 col-md-3">
+                <div class="stat-card">
+                    <div class="card-body d-flex align-items-center p-3">
+                        <div class="stat-icon online me-3"><i class="bi bi-circle-fill"></i></div>
+                        <div>
+                            <div class="stat-value online" id="statOnline">{{ online_count }}</div>
+                            <div class="stat-label">Онлайн</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4 col-md-3">
+                <div class="stat-card">
+                    <div class="card-body d-flex align-items-center p-3">
+                        <div class="stat-icon offline me-3"><i class="bi bi-circle"></i></div>
+                        <div>
+                            <div class="stat-value offline" id="statOffline">{{ offline_count }}</div>
+                            <div class="stat-label">Оффлайн</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4 col-md-3">
+                <div class="stat-card">
+                    <div class="card-body d-flex align-items-center p-3">
+                        <div class="stat-icon repair me-3"><i class="bi bi-tools"></i></div>
+                        <div>
+                            <div class="stat-value repair" id="statRepair">{{ repair_count }}</div>
+                            <div class="stat-label">В ремонте</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4 col-md-3">
+                <div class="stat-card">
+                    <div class="card-body d-flex align-items-center p-3">
+                        <div class="stat-icon total me-3"><i class="bi bi-clipboard-check"></i></div>
+                        <div>
+                            <div class="stat-value" id="examsToday">{{ today_exams_total }}</div>
+                            <div class="stat-label">Осмотров сегодня</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4 col-md-3">
+                <div class="stat-card">
+                    <div class="card-body d-flex align-items-center p-3">
+                        <div class="stat-icon repair me-3"><i class="bi bi-x-circle"></i></div>
+                        <div>
+                            <div class="stat-value repair" id="cancelledToday">{{ today_cancelled_total }}</div>
+                            <div class="stat-label">Отменено сегодня</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4 col-md-3">
+                <div class="stat-card">
+                    <div class="card-body d-flex align-items-center p-3">
+                        <div class="stat-icon online me-3"><i class="bi bi-check2-all"></i></div>
+                        <div>
+                            <div class="stat-value">{{ med_ready }}<span class="text-muted ms-1" style="font-size:.7rem;">/{{ med_total }}</span></div>
+                            <div class="stat-label">Средства готовы</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4 col-md-3">
+                <div class="stat-card">
+                    <div class="card-body d-flex align-items-center p-3">
+                        <div class="stat-icon repair me-3"><i class="bi bi-shield-exclamation"></i></div>
+                        <div>
+                            <div class="stat-value">{{ verif_expired }}<span class="text-muted ms-1" style="font-size:.7rem;">скоро {{ verif_soon }}</span></div>
+                            <div class="stat-label">Поверки</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-6 col-sm-6 col-md-3">
-        <div class="stat-card">
-            <div class="card-body d-flex align-items-center p-3">
-                <div class="stat-icon online me-3"><i class="bi bi-circle-fill"></i></div>
-                <div>
-                    <div class="stat-value online" id="statOnline">{{ online_count }}</div>
-                    <div class="stat-label">Онлайн</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-sm-6 col-md-3">
-        <div class="stat-card">
-            <div class="card-body d-flex align-items-center p-3">
-                <div class="stat-icon offline me-3"><i class="bi bi-circle"></i></div>
-                <div>
-                    <div class="stat-value offline" id="statOffline">{{ offline_count }}</div>
-                    <div class="stat-label">Оффлайн</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-sm-6 col-md-3">
-        <div class="stat-card">
-            <div class="card-body d-flex align-items-center p-3">
-                <div class="stat-icon repair me-3"><i class="bi bi-tools"></i></div>
-                <div>
-                    <div class="stat-value repair" id="statRepair">{{ repair_count }}</div>
-                    <div class="stat-label">В ремонте</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Медготовность и распределение -->
-<div class="row g-3 mb-3">
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="card-body d-flex align-items-center p-3">
-                <div class="stat-icon online me-3"><i class="bi bi-check2-all"></i></div>
-                <div>
-                    <div class="stat-value">{{ med_ready }}<span class="text-muted ms-1" style="font-size:.7rem;">/{{ med_total }}</span></div>
-                    <div class="stat-label">Средства готовы</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="card-body d-flex align-items-center p-3">
-                <div class="stat-icon repair me-3"><i class="bi bi-shield-exclamation"></i></div>
-                <div>
-                    <div class="stat-value">{{ verif_expired }}<span class="text-muted ms-1" style="font-size:.7rem;">скоро {{ verif_soon }}</span></div>
-                    <div class="stat-label">Поверки</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-12 col-md-6">
-        <div class="stat-card px-3 py-3 h-100">
-            <div class="stat-label mb-1"><i class="bi bi-bar-chart"></i> Распределение</div>
-            <div class="dist-bar">
+        <div class="d-flex align-items-center gap-3 mt-3">
+            <span class="small muted" style="min-width:150px;">Распределение · Онлайн {{ online_pct }}%</span>
+            <div class="dist-bar flex-grow-1">
                 <div class="dist-online" style="width:{{ online_pct }}%;" title="Онлайн {{ online_pct }}%"></div>
                 <div class="dist-offline" style="width:{{ offline_pct }}%;" title="Оффлайн {{ offline_pct }}%"></div>
             </div>
-            <div class="dist-legend small">
-                <span><i class="bi bi-circle-fill"></i> Онлайн: {{ online_pct }}%</span>
-                <span><i class="bi bi-circle-fill"></i> Оффлайн: {{ offline_pct }}%</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Осмотры за сегодня -->
-<div class="row g-3 mb-3">
-    <div class="col-6 col-md-6">
-        <div class="stat-card">
-            <div class="card-body d-flex align-items-center p-3">
-                <div class="stat-icon total me-3"><i class="bi bi-clipboard-check"></i></div>
-                <div>
-                    <div class="stat-value" id="examsToday">{{ today_exams_total }}</div>
-                    <div class="stat-label">Осмотров сегодня</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-6">
-        <div class="stat-card">
-            <div class="card-body d-flex align-items-center p-3">
-                <div class="stat-icon repair me-3"><i class="bi bi-x-circle"></i></div>
-                <div>
-                    <div class="stat-value repair" id="cancelledToday">{{ today_cancelled_total }}</div>
-                    <div class="stat-label">Отменено сегодня</div>
-                </div>
-            </div>
+            <span class="small muted" style="min-width:120px;text-align:right;">Оффлайн {{ offline_pct }}%</span>
         </div>
     </div>
 </div>
@@ -167,23 +159,6 @@
     </div>
 </div>
 
-<!-- Массовые действия -->
-{% if user.profile.role == 'admin' %}
-<div class="filter-card card mb-3" id="bulkPanel" style="display:none;">
-    <div class="card-body p-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <span class="fw-bold" style="font-size:0.8rem;">Выбрано: <span id="selectedCount">0</span></span>
-        <div>
-            <button class="btn btn-soft btn-outline-danger btn-sm me-2" onclick="bulkAction('reboot')"><i class="bi bi-power"></i> Reboot</button>
-            <button class="btn btn-soft btn-outline-warning btn-sm me-2" onclick="bulkAction('stop')"><i class="bi bi-stop-circle"></i> Стоп</button>
-            <button class="btn btn-soft btn-outline-primary btn-sm" onclick="bulkAction('start')"><i class="bi bi-play-circle"></i> Старт</button>
-        </div>
-        <button class="btn btn-sm btn-soft btn-outline-secondary" onclick="toggleBulkPanel()">×</button>
-    </div>
-</div>
-{% endif %}
-
-<form id="bulkForm" method="post" action="{% url 'bulk_action' %}">
-{% csrf_token %}
 <div class="page-head accent-{{ page_status }}" id="pageHead">
     <h1>
         <i class="bi bi-grid"></i> Киоски
@@ -225,9 +200,6 @@
                         <span class="badge-soft {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}"
                               id="badge-{{ device.pk }}"
                               title="{% if device.in_repair %}Ремонт{% elif device.is_online %}Онлайн{% else %}Оффлайн{% endif %}"></span>
-                        {% if user.profile.role == 'admin' and device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
-                        <input type="checkbox" name="device_ids" value="{{ device.pk }}" class="form-check-input device-check" onclick="event.stopPropagation();updateBulkPanel()" style="width:12px;height:12px;margin:0;">
-                        {% endif %}
                     </div>
                 </div>
                 {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' or device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
@@ -258,8 +230,8 @@
                     <span class="mi {{ device.alco_ok|yesno:'ok,err' }}" title="Алкотестер: {{ device.alco_ok|yesno:'подключён,проблема' }}"><i class="bi bi-droplet-half"></i> Алко</span>
                     <span class="mi {{ device.tono_ok|yesno:'ok,err' }}" title="Тонометр: {{ device.tono_ok|yesno:'подключён,проблема' }}"><i class="bi bi-heart-pulse"></i> Тоно</span>
                 </div>
-                {% with total_all=all_total|get_item:device.pk latest_day=today_exams|get_item:device.pk %}
-                <div class="meta dc-exams"><i class="bi bi-clipboard-check"></i> Осмотры: всего {% if total_all is not None %}{{ total_all }}{% elif device.exam_count is not None %}{{ device.exam_count }}{% else %}—{% endif %} · за день {% if latest_day is not None %}{{ latest_day }}{% else %}0{% endif %}</div>
+                {% with latest_day=today_exams|get_item:device.pk %}
+                <div class="meta dc-exams"><i class="bi bi-clipboard-check"></i> Осмотров сегодня: {% if latest_day is not None %}{{ latest_day }}{% else %}0{% endif %}</div>
                 {% endwith %}
                 {% with vs=verif_states|get_item:device.pk %}
                 {% if vs %}
@@ -276,38 +248,6 @@
                 <div class="meta dc-offline" id="offline-{{ device.pk }}"><i class="bi bi-clock"></i> оффлайн {{ device.offline_duration }}</div>
                 {% endif %}
 
-                {% if device.cpu_load is not None or device.hdd_percent is not None or device.memory_percent is not None %}
-                <div class="device-metrics">
-                    {% if device.cpu_load is not None %}
-                    <div class="metric" title="CPU: {{ device.cpu_load|floatformat:"0" }}%">
-                        <i class="metric-icon bi bi-cpu"></i>
-                        <div class="metric-track">
-                            <div class="metric-fill {% if device.cpu_load < 40 %}is-good{% elif device.cpu_load < 70 %}is-warn{% else %}is-bad{% endif %}" id="mCpu-{{ device.pk }}" style="width:{% widthratio device.cpu_load 100 100 %}%;"></div>
-                        </div>
-                        <span class="metric-value" id="mCpuVal-{{ device.pk }}">{{ device.cpu_load|floatformat:"0" }}%</span>
-                    </div>
-                    {% endif %}
-                    {% if device.hdd_percent is not None %}
-                    <div class="metric" title="Диск: {{ device.hdd_percent|floatformat:"0" }}%">
-                        <i class="metric-icon bi bi-hdd"></i>
-                        <div class="metric-track">
-                            <div class="metric-fill {% if device.hdd_percent < 70 %}is-good{% elif device.hdd_percent < 85 %}is-warn{% else %}is-bad{% endif %}" id="mHdd-{{ device.pk }}" style="width:{% widthratio device.hdd_percent 100 100 %}%;"></div>
-                        </div>
-                        <span class="metric-value" id="mHddVal-{{ device.pk }}">{{ device.hdd_percent|floatformat:"0" }}%</span>
-                    </div>
-                    {% endif %}
-                    {% if device.memory_percent is not None %}
-                    <div class="metric" title="RAM: {{ device.memory_percent|floatformat:"0" }}%">
-                        <i class="metric-icon bi bi-memory"></i>
-                        <div class="metric-track">
-                            <div class="metric-fill {% if device.memory_percent < 70 %}is-good{% elif device.memory_percent < 85 %}is-warn{% else %}is-bad{% endif %}" id="mRam-{{ device.pk }}" style="width:{% widthratio device.memory_percent 100 100 %}%;"></div>
-                        </div>
-                        <span class="metric-value" id="mRamVal-{{ device.pk }}">{{ device.memory_percent|floatformat:"0" }}%</span>
-                    </div>
-                    {% endif %}
-                </div>
-                {% endif %}
-
                 {% if device.in_repair and device.pk in repair_map %}
                 {% with rp=repair_map|get_item:device.pk %}
                 <div class="repair-progress">
@@ -321,6 +261,37 @@
                 {% endif %}
 
                 <div class="device-detail" id="detail-{{ device.pk }}">
+                    {% if device.cpu_load is not None or device.hdd_percent is not None or device.memory_percent is not None %}
+                    <div class="device-metrics">
+                        {% if device.cpu_load is not None %}
+                        <div class="metric" title="CPU: {{ device.cpu_load|floatformat:"0" }}%">
+                            <i class="metric-icon bi bi-cpu"></i>
+                            <div class="metric-track">
+                                <div class="metric-fill {% if device.cpu_load < 40 %}is-good{% elif device.cpu_load < 70 %}is-warn{% else %}is-bad{% endif %}" id="mCpu-{{ device.pk }}" style="width:{% widthratio device.cpu_load 100 100 %}%;"></div>
+                            </div>
+                            <span class="metric-value" id="mCpuVal-{{ device.pk }}">{{ device.cpu_load|floatformat:"0" }}%</span>
+                        </div>
+                        {% endif %}
+                        {% if device.hdd_percent is not None %}
+                        <div class="metric" title="Диск: {{ device.hdd_percent|floatformat:"0" }}%">
+                            <i class="metric-icon bi bi-hdd"></i>
+                            <div class="metric-track">
+                                <div class="metric-fill {% if device.hdd_percent < 70 %}is-good{% elif device.hdd_percent < 85 %}is-warn{% else %}is-bad{% endif %}" id="mHdd-{{ device.pk }}" style="width:{% widthratio device.hdd_percent 100 100 %}%;"></div>
+                            </div>
+                            <span class="metric-value" id="mHddVal-{{ device.pk }}">{{ device.hdd_percent|floatformat:"0" }}%</span>
+                        </div>
+                        {% endif %}
+                        {% if device.memory_percent is not None %}
+                        <div class="metric" title="RAM: {{ device.memory_percent|floatformat:"0" }}%">
+                            <i class="metric-icon bi bi-memory"></i>
+                            <div class="metric-track">
+                                <div class="metric-fill {% if device.memory_percent < 70 %}is-good{% elif device.memory_percent < 85 %}is-warn{% else %}is-bad{% endif %}" id="mRam-{{ device.pk }}" style="width:{% widthratio device.memory_percent 100 100 %}%;"></div>
+                            </div>
+                            <span class="metric-value" id="mRamVal-{{ device.pk }}">{{ device.memory_percent|floatformat:"0" }}%</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     {% if device.cpu_temperature or device.temperature %}
                     <div class="row-line"><span class="k">Температура CPU</span><span class="v">{% if device.cpu_temperature %}{{ device.cpu_temperature }}{% else %}{{ device.temperature }}{% endif %}</span></div>
                     {% endif %}
@@ -358,7 +329,6 @@
     </div>
 {% endfor %}
 </div>
-</form>
 
 {% if page_obj and page_obj.paginator.num_pages > 1 %}
 <nav aria-label="Пагинация" class="mt-3 d-flex justify-content-center">
@@ -534,26 +504,4 @@ if (searchInput && searchForm) {
 }
 </script>
 
-{% if user.profile.role == 'admin' %}
-<script>
-function updateBulkPanel() {
-    var count = document.querySelectorAll('.device-check:checked').length;
-    document.getElementById('selectedCount').textContent = count;
-    document.getElementById('bulkPanel').style.display = count > 0 ? 'block' : 'none';
-}
-function toggleBulkPanel() {
-    document.getElementById('bulkPanel').style.display = 'none';
-    document.querySelectorAll('.device-check').forEach(c => c.checked = false);
-}
-function bulkAction(action) {
-    var form = document.getElementById('bulkForm');
-    var input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'action';
-    input.value = action;
-    form.appendChild(input);
-    if(confirm('Выполнить '+action+'?')) form.submit();
-}
-</script>
-{% endif %}
 {% endblock %}
