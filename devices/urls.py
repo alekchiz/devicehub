@@ -17,6 +17,7 @@ urlpatterns = [
     path('device/<int:pk>/start/', views.device_start, name='device_start'),
     path('device/<int:pk>/upload/', views.device_upload, name='device_upload'),
     path('device/<int:pk>/set-password/', views.device_set_password, name='device_set_password'),
+    path('device/<int:pk>/vnc-setup/', views.device_vnc_setup, name='device_vnc_setup'),
     path('device/<int:pk>/report/', views.export_device_report, name='export_device_report'),
     path('export/', views.export_devices_excel, name='export_devices'),
     path('export/history/', views.export_devices_history, name='export_devices_history'),

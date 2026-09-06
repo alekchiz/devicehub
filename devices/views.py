@@ -247,6 +247,27 @@ def ssh_change_password(device, new_password):
     Device.objects.filter(pk=device.pk).update(password_migrated=True)
     return True, 'Пароль киоска изменён'
 
+
+def _ssh_vnc_setup(device, vnc_password):
+    """Настраивает x0vncserver на ПАК: кладёт пароль в .vnc/passwd и рестартит сервис."""
+    if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
+        return _SSHFailed('SSH: у киоска нет VPN IP')
+
+    def vnc_cmd(sudo_pwd):
+        es = sudo_pwd.replace("'", "'\\''")
+        ev = vnc_password.replace("'", "'\\''")
+        return ("mkdir -p /home/terminal/.vnc && "
+                "printf '%s\\n' '{sudo}' | LC_ALL=C sudo -S sh -c "
+                "\"printf '%s\\n' '{vnc}' | vncpasswd -f > /home/terminal/.vnc/passwd.new "
+                "&& chown terminal:terminal /home/terminal/.vnc/passwd.new "
+                "&& chmod 600 /home/terminal/.vnc/passwd.new "
+                "&& mv -f /home/terminal/.vnc/passwd.new /home/terminal/.vnc/passwd "
+                "&& systemctl restart x0vncserver.service\"").format(sudo=es, vnc=ev)
+
+    return _ssh_run(device.vpn_ip, None, _ssh_candidate_passwords(device),
+                    sudo_passwords=_ssh_sudo_passwords(device),
+                    sudo_cmd=vnc_cmd)
+
 @login_required
 def dashboard(request):
     query = request.GET.get('q', '')
@@ -631,6 +652,28 @@ def device_set_password(request, pk):
                 messages.success(request, f'{device.hostname}: {msg}')
             else:
                 messages.error(request, f'{device.hostname}: {msg}')
+    return redirect('device_detail_page', pk=pk)
+
+
+@user_passes_test(is_admin)
+def device_vnc_setup(request, pk):
+    """Настраивает VNC (x0vncserver) на киоске по кнопке и ставит vnc_ready."""
+    device = get_object_or_404(Device, pk=pk)
+    if request.method == 'POST':
+        if not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
+            messages.error(request, f'{device.hostname}: нет VPN IP')
+            return redirect('device_detail_page', pk=pk)
+        vnc_pass = getattr(settings, 'DEVICE_VNC_PASSWORD', '') or settings.DEVICE_SSH_PASSWORD
+        if not vnc_pass:
+            messages.error(request, 'Не задан VNC-пароль (DEVICE_VNC_PASSWORD)')
+            return redirect('device_detail_page', pk=pk)
+        result = _ssh_vnc_setup(device, vnc_pass)
+        if result.returncode == 0:
+            Device.objects.filter(pk=device.pk).update(vnc_ready=True)
+            messages.success(request, f'{device.hostname}: VNC настроен (x0vncserver, порт 5900)')
+        else:
+            messages.warning(
+                request, f'{device.hostname}: {result.stderr.strip() or "ошибка настройки VNC"}')
     return redirect('device_detail_page', pk=pk)
 
 

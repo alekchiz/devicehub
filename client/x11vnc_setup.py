@@ -101,10 +101,8 @@ def generate_password():
 
 
 def stop_existing():
-    """Гасит старые экземпляры x11vnc и освобождает порт 5900."""
+    """Гасит старые экземпляры x11vnc (свои), не трогая другие VNC-сервисы."""
     run(["pkill", "-f", "x11vnc"])
-    if sh("command -v fuser 2>/dev/null; echo $?") == "0":
-        run(["fuser", "-k", "5900/tcp"])
     time.sleep(2)
 
 
@@ -122,6 +120,7 @@ def main():
     uid = pwd.getpwnam(user_name).pw_uid
     display = find_display()
     is_wl = is_wayland()
+    port = (os.getenv("X11VNC_PORT") or "5900").strip()
 
     print("Пользователь: {}".format(user_name))
     print("Дисплей: {}".format(display))
@@ -168,13 +167,13 @@ Group={user}
 Environment=DISPLAY={display}
 WorkingDirectory={home}
 ExecStartPre=/bin/sleep 3
-ExecStart=/usr/bin/x11vnc -forever -shared -rfbauth {passfile} -display {display} -rfbport 5900 -logfile {logfile} -auth guess -xkb -noxrecord -noxfixes -noxdamage
+ExecStart=/usr/bin/x11vnc -forever -shared -rfbauth {passfile} -display {display} -rfbport {port} -logfile {logfile} -auth guess -xkb -noxrecord -noxfixes -noxdamage
 Restart=always
 RestartSec=5
 
 [Install]
 WantedBy=graphical.target
-""".format(user=user_name, display=display, home=home,
+""".format(user=user_name, display=display, home=home, port=port,
            passfile=passfile, logfile=logfile)
 
     service_path = Path("/etc/systemd/system/x11vnc.service")
@@ -193,7 +192,7 @@ WantedBy=graphical.target
         print("\n" + "=" * 52)
         print("X11VNC НАСТРОЕН УСПЕШНО")
         print("=" * 52)
-        print("Подключение: {}:5900".format(ip_addr))
+        print("Подключение: {}:{}".format(ip_addr, port))
         print("Пароль:      {}".format(vnc_password))
         if generated:
             print("(пароль сгенерирован автоматически — сохраните его)")

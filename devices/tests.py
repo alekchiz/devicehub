@@ -896,3 +896,28 @@ class MigrateSshPasswordsCommandTests(TestCase):
         device.refresh_from_db()
         self.assertTrue(device.password_migrated)
         self.assertEqual(device.ssh_password, 'Pochta@medQaZ')
+
+
+class VncSetupViewTests(TestCase):
+    @override_settings(DEVICE_VNC_PASSWORD='vnc-pass')
+    @patch('devices.views._ssh_vnc_setup')
+    def test_vnc_setup_marks_vnc_ready(self, m):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+        admin = User.objects.create_user(username='vncadmin', password='p')
+        admin.profile.role = 'admin'
+        admin.profile.save()
+        device = Device.objects.create(hostname='555', vpn_ip='10.0.0.5')
+        self.client.force_login(admin)
+        m.return_value = SimpleNamespace(returncode=0, stdout='', stderr='')
+
+        resp = self.client.post(reverse('device_vnc_setup', args=[device.pk]))
+        self.assertRedirects(resp, reverse('device_detail_page', args=[device.pk]))
+        device.refresh_from_db()
+        self.assertTrue(device.vnc_ready)
+
+    def test_vnc_setup_requires_admin(self):
+        from django.urls import reverse
+        device = Device.objects.create(hostname='556', vpn_ip='10.0.0.6')
+        resp = self.client.post(reverse('device_vnc_setup', args=[device.pk]))
+        self.assertEqual(resp.status_code, 302)

@@ -85,12 +85,12 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="text-muted">X11VNC</td>
+                        <td class="text-muted">VNC (x0vncserver)</td>
                         <td>
-                            {% if device.x11vnc == '✅' or device.x11vnc == 'installed' %}
-                                <span class="text-success">✅ Установлен</span>
+                            {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
+                                <span class="text-success"><i class="bi bi-key"></i> {{ device.vpn_ip }}:5900</span>
                             {% else %}
-                                <span class="text-muted">❌ Не установлен</span>
+                                <span class="text-muted">—</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -128,16 +128,30 @@
                 <a href="ssh://terminal@{{ device.vpn_ip }}" class="btn btn-outline-success btn-sm me-2">
                     <i class="bi bi-terminal"></i> SSH
                 </a>
+                {% if device.password_migrated %}
+                <span class="ns-badge" style="background:#1f9d55;color:#fff;vertical-align:middle;"
+                      title="SSH-пароль стандартный (Pochta@medQaZ)"><i class="bi bi-key"></i></span>
+                {% endif %}
                 {% if device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
                 <a href="anydesk:{{ device.anydesk }}" class="btn btn-outline-primary btn-sm me-2">
                     <i class="bi bi-display"></i> AnyDesk
                 </a>
                 {% endif %}
-                {% if device.x11vnc == '✅' or device.x11vnc == 'installed' %}
-                <button class="btn btn-outline-info btn-sm me-2" 
-                        onclick="navigator.clipboard.writeText('{{ device.vpn_ip }}');alert('IP {{ device.vpn_ip }} скопирован. Вставьте в VNC Viewer.');">
-                    <i class="bi bi-eye"></i> VNC
-                </button>
+                <a href="vnc://{{ device.vpn_ip }}:5900" class="btn btn-outline-info btn-sm me-2"
+                   title="Открыть в VNC Viewer (x0vncserver, порт 5900)">
+                    <i class="bi bi-eye"></i> VNC (x0vncserver)
+                </a>
+                <span class="ns-badge" style="vertical-align:middle;" title="VNC порт 5900"><i class="bi bi-key"></i> 5900</span>
+                <form method="post" action="{% url 'device_vnc_setup' device.pk %}" class="d-inline-block me-2"
+                      onsubmit="return confirm('Настроить VNC (x0vncserver) на {{ device.hostname }}?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-info btn-sm"><i class="bi bi-gear"></i> Настроить VNC</button>
+                </form>
+                {% if device.vnc_ready %}
+                <span class="ns-badge" style="background:#1f9d55;color:#fff;vertical-align:middle;"
+                      title="VNC настроен (x0vncserver, порт 5900)"><i class="bi bi-key"></i> VNC ✓</span>
+                {% else %}
+                <span class="ns-badge" style="vertical-align:middle;" title="VNC ещё не настроен"><i class="bi bi-key"></i></span>
                 {% endif %}
                 <a href="{% url 'device_reboot' device.pk %}" class="btn btn-outline-danger btn-sm me-2"
                    onclick="return confirm('Перезагрузить {{ device.hostname }}?')">

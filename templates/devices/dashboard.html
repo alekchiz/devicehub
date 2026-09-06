@@ -211,6 +211,7 @@
                         <span class="hostname text-truncate" style="min-width:0;">{{ device.hostname }}</span>
                         {% if not device.is_standard %}<span class="ns-badge"><i class="bi bi-stars"></i> Новый</span>{% endif %}
                         {% if device.password_migrated %}<span class="ns-badge" style="background:#1f9d55;color:#fff;" title="Пароль обновлён"><i class="bi bi-key"></i></span>{% endif %}
+                        {% if device.vnc_ready %}<span class="ns-badge" style="background:#0ea5e9;color:#fff;" title="VNC настроен"><i class="bi bi-eye"></i></span>{% endif %}
                     </div>
                     <div class="d-flex align-items-center gap-1">
                         <span class="badge-soft {% if device.in_repair %}repair{% elif device.is_online %}online{% else %}offline{% endif %}"
