@@ -874,3 +874,22 @@ class ProbeSshPasswordsCommandTests(TestCase):
             SimpleNamespace(returncode=5, stdout='', stderr='Permission denied.')
         )
         call_command('probe_ssh_passwords')
+
+
+class MigrateSshPasswordsCommandTests(TestCase):
+    @override_settings(DEVICE_SSH_PASSWORD='Pochta@medQaZ')
+    @patch('devices.views.subprocess.run')
+    def test_migrates_and_marks_device(self, m):
+        from django.core.management import call_command
+        device = Device.objects.create(hostname='900', vpn_ip='10.0.0.9')
+
+        m.side_effect = lambda args, capture_output=True, text=True, timeout=10: (
+            SimpleNamespace(returncode=0, stdout='', stderr='')
+            if args[2] == 'Pochta@medQaZ'
+            else SimpleNamespace(returncode=5, stdout='', stderr='Permission denied.')
+        )
+
+        call_command('migrate_ssh_passwords', hostname='900')
+        device.refresh_from_db()
+        self.assertTrue(device.password_migrated)
+        self.assertEqual(device.ssh_password, 'Pochta@medQaZ')
