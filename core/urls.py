@@ -4,6 +4,10 @@ from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect
 from accounts.views import RateLimitedLoginView
 
+# «core» не является приложением, поэтому admin не автообнаруживается.
+# Импорт здесь применяет настройку сайта админки и rate-limit на вход в неё.
+import core.admin  # noqa: F401
+
 def redirect_to_dashboard(request):
     return redirect('dashboard')
 

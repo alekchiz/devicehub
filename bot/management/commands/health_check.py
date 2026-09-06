@@ -17,7 +17,7 @@ def get_server_stats():
         total = user + nice + system + idle
         used = user + nice + system
         stats['cpu'] = round((used / total) * 100, 1)
-    except:
+    except Exception:
         stats['cpu'] = 0
     
     # RAM
@@ -35,14 +35,14 @@ def get_server_stats():
             stats['ram'] = round(((total - available) / total) * 100, 1)
         else:
             stats['ram'] = 0
-    except:
+    except Exception:
         stats['ram'] = 0
     
     # Disk
     try:
         stat = os.statvfs('/')
         stats['disk'] = round((1 - stat.f_bavail / stat.f_blocks) * 100, 1)
-    except:
+    except Exception:
         stats['disk'] = 0
     
     return stats
@@ -57,7 +57,7 @@ class Command(BaseCommand):
         try:
             urllib.request.urlopen('https://support-pak.ru', timeout=5)
             site_status = '✅'
-        except:
+        except Exception:
             site_status = '❌'
         
         # Киоски

@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import Trip
@@ -30,7 +30,7 @@ def trip_create(request):
 @login_required
 def trip_delete(request, pk):
     if request.method == 'POST':
-        trip = Trip.objects.get(pk=pk)
+        trip = get_object_or_404(Trip, pk=pk)
         trip.delete()
         messages.success(request, 'Поездка удалена')
     return redirect('trips_list')

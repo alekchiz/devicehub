@@ -50,3 +50,12 @@ class LoginRateLimitTests(TestCase):
 
         resp = self.client.post('/accounts/login/', {'username': 'alice', 'password': 'secret'})
         self.assertRedirects(resp, '/dashboard/', fetch_redirect_response=False)
+
+    def test_admin_login_rate_limited(self):
+        # У входа в админку тот же лимит по IP, что и у /accounts/login/.
+        for _ in range(5):
+            self.client.post('/admin/login/', {'username': 'bob', 'password': 'wrong'})
+
+        resp = self.client.post('/admin/login/', {'username': 'bob', 'password': 'wrong'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Слишком много неудачных попыток')

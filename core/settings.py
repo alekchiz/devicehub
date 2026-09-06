@@ -110,7 +110,17 @@ DEVICE_SSH_PASSWORD = os.getenv('DEVICE_SSH_PASSWORD', '')
 # не задан свой пароль и глобальный не подошёл.
 DEVICE_SSH_PASSWORDS = [p for p in os.getenv('DEVICE_SSH_PASSWORDS', '').split(',') if p.strip()]
 
-AUTH_PASSWORD_VALIDATORS = []
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
 
 LANGUAGE_CODE = 'ru-ru'
 TIME_ZONE = 'Europe/Moscow'

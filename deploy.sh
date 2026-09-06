@@ -17,7 +17,11 @@ LOCAL_DIR="${LOCAL_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 
 # Что НЕ переносим на сервер
 EXCLUDES=(--exclude venv --exclude __pycache__ --exclude '*.py[cod]'
-          --exclude .git --exclude .DS_Store --exclude mqtt.log)
+          --exclude .git --exclude .DS_Store --exclude mqtt.log
+          # Каталоги, которые живут только на сервере. Без них rsync --delete
+          # удалил бы их в пункте назначения (например, backups/ с бэкапами).
+          --exclude backups --exclude staticfiles --exclude logs
+          --exclude db.sqlite3)
 
 # .env не исключаем — он единственный источник секретов и обязан быть на сервере.
 

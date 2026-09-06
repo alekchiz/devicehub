@@ -1,10 +1,11 @@
 import subprocess
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 import re
 from django.http import JsonResponse
-from django.db.models import Q, Count, Sum
+from django.db.models import Q, Count, Sum, OuterRef, Subquery
 from .models import Device, Owner, Client, Location, Repair, Verification, DeviceEvent, DailyExam
 from tickets.models import Ticket
 from shipments.models import Shipment
@@ -13,6 +14,8 @@ from django.utils import timezone
 from django.conf import settings
 from django.core.paginator import Paginator
 from core.excel_utils import new_workbook, xlsx_response, style_header_row, autosize_columns
+
+logger = logging.getLogger(__name__)
 
 def is_admin(user):
     return user.is_authenticated and user.profile.role == 'admin'
@@ -267,12 +270,14 @@ def dashboard(request):
         .annotate(total=Sum('exams'))
         .values_list('device_id', 'total')
     )
-    latest_map = {}
-    for pid, d, exams in DailyExam.objects.values_list('device_id', 'date', 'exams'):
-        cur = latest_map.get(pid)
-        if cur is None or d > cur[0]:
-            latest_map[pid] = (d, exams)
-    today_exams = {pid: ex for pid, (d, ex) in latest_map.items()}
+    # «За день» — количество осмотров из последнего снимка (без полного перебора
+    # всех строк DailyExam на каждую загрузку дашборда).
+    latest_snapshot = DailyExam.objects.filter(device_id=OuterRef('pk')).order_by('-date', '-pk')
+    today_exams = dict(
+        all_devices.annotate(
+            _latest_exams=Subquery(latest_snapshot.values('exams')[:1]),
+        ).values_list('pk', '_latest_exams')
+    )
 
     if repair_count:
         page_status = 'repair'
@@ -551,6 +556,7 @@ def bulk_action(request):
         devices = Device.objects.filter(id__in=device_ids)
         success = 0
         failed = 0
+        failed_hosts = []
         
         for device in devices:
             if not device.vpn_ip or device.vpn_ip in ['0', 'N/A']:
@@ -572,10 +578,13 @@ def bulk_action(request):
                         ssh_reboot(device)
                 
                 success += 1
-            except:
+            except Exception as e:
+                logger.warning('Bulk action %s failed for %s: %s', action, device.hostname, e)
                 failed += 1
+                failed_hosts.append(device.hostname)
         
-        messages.success(request, f'✅ Выполнено: {success}, ошибок: {failed}')
+        suffix = f' ({", ".join(failed_hosts[:5])})' if failed_hosts else ''
+        messages.success(request, f'✅ Выполнено: {success}, ошибок: {failed}{suffix}')
     
     return redirect('dashboard')
 

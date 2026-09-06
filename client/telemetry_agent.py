@@ -12,10 +12,11 @@
 #   python3 telemetry_agent.py
 #
 # Установка по cron (раз в 5 минут):
-#   0,5,10,15,20,25,30,35,40,45,50,55 * * * * cd /opt/retail && python3 telemetry_agent.py >> /var/log/retail_agent.log 2>&1
+#   0,5,10,15,20,25,30,35,40,45,50,55 * * * * cd /opt/retail && MQTT_PASS=ваш_пароль python3 telemetry_agent.py >> /var/log/retail_agent.log 2>&1
 #
 # Переменные окружения (опционально):
-#   MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASS — параметры подключения
+#   MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASS — параметры подключения.
+#   MQTT_PASS обязателен: пароль читается только из окружения, в коде его нет.
 #   MQC_VERBOSE=1 — печатать весь JSON перед отправкой
 
 from __future__ import print_function
@@ -37,7 +38,10 @@ import paho.mqtt.publish as publish
 SERVER_IP = os.getenv("MQTT_HOST", "tihon.grigorenko.online")
 SERVER_PORT = int(os.getenv("MQTT_PORT", "1883"))
 MQTT_USER = os.getenv("MQTT_USER", "pak")
-MQTT_PASS = os.getenv("MQTT_PASS", "p0chta")
+# Пароль не должен попадать в код — он берётся только из окружения
+# (см. cron-запись с env MQTT_PASS). Пустой default не даст подключиться
+# молча с «секретом» из исходников.
+MQTT_PASS = os.getenv("MQTT_PASS", "")
 
 MQTT_PROTOCOL = mqtt.MQTTv311
 
