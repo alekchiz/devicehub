@@ -22,11 +22,14 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--limit', type=int, default=0,
                             help='Только первые N киосков по номеру (0 = все)')
+        parser.add_argument('--offset', type=int, default=0,
+                            help='Пропустить первые N киосков по номеру')
         parser.add_argument('--hostname', default='',
                             help='Обработать только один киоск по номеру')
 
     def handle(self, *args, **options):
         limit = options['limit']
+        offset = options['offset']
         single = options['hostname'].strip()
 
         qs = (Device.objects.filter(hostname__regex=r'^\d{3,}$')
@@ -34,13 +37,20 @@ class Command(BaseCommand):
               .order_by('hostname'))
         if single:
             qs = qs.filter(hostname__iexact=single)
-        elif limit:
-            qs = qs[:limit]
+        else:
+            if offset:
+                qs = qs[offset:]
+            if limit:
+                qs = qs[:limit]
         devices = list(qs)
 
         self.stdout.write(f'Обработать киосков: {len(devices)}')
         done = fail = 0
+        skipped = 0
         for d in devices:
+            if d.password_migrated:
+                skipped += 1
+                continue
             ok, msg = ssh_change_password(d, TARGET)
             if ok:
                 Device.objects.filter(pk=d.pk).update(
@@ -51,5 +61,7 @@ class Command(BaseCommand):
                 fail += 1
                 self.stdout.write(self.style.WARNING(
                     f'FAIL {d.hostname} ({d.vpn_ip}) -> {msg.strip()[-140:]}'))
+        if skipped:
+            self.stdout.write(f'Пропущено уже готовых: {skipped}')
         self.stdout.write(self.style.SUCCESS(
             f'Итог: успешно {done}, ошибок {fail}'))
