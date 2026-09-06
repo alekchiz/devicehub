@@ -109,11 +109,16 @@ def _ssh_auth_failed(result):
 
 
 def _sudo_auth_failed(result):
-    """Признак неудачного sudo: неверный sudo-пароль или нет прав."""
+    """Признак неудачного sudo: неверный sudo-пароль или нет прав.
+    Ключевые слова и на английском, и на русском (локали sudo бывают разными;
+    вдобавок команды sudo принудительно запускаются с LC_ALL=C).
+    """
     err = (result.stderr or '').lower()
     return any(k in err for k in (
         'incorrect password', 'try again', 'no password',
         'authentication failure', 'not in sudoers',
+        'неправильного пароля', 'неверный пароль', 'попробуйте ещё раз',
+        'требуется пароль', 'не входит в sudoers', 'не найден в sudoers',
     ))
 
 
@@ -165,7 +170,7 @@ def ssh_reboot(device):
 
     def reboot_cmd(sudo_pwd):
         escaped = sudo_pwd.replace("'", "'\\''")
-        return f"printf '%s\\n' '{escaped}' | sudo -S reboot"
+        return f"printf '%s\\n' '{escaped}' | LC_ALL=C sudo -S reboot"
 
     return _ssh_run(device.vpn_ip, None, _ssh_candidate_passwords(device),
                     sudo_passwords=_ssh_sudo_passwords(device),
@@ -226,7 +231,7 @@ def ssh_change_password(device, new_password):
 
     def change_cmd(sudo_pwd):
         escaped_sudo = sudo_pwd.replace("'", "'\\''")
-        base = ("printf '%s\\n' '{sudo}' | sudo -S sh -c "
+        base = ("printf '%s\\n' '{sudo}' | LC_ALL=C sudo -S sh -c "
                 "\"printf '%s\\n' '{user}:{new}' | chpasswd\"").format(
                     sudo=escaped_sudo, user=escaped_user, new=escaped_new)
         keys_cmd = _authorized_keys_cmd()
