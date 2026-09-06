@@ -6,15 +6,16 @@ from .tickets_common import (
     TICKET_PAK, TICKET_PROBLEM, TICKET_NAME, TICKET_PHONE,
     format_ticket_message, menu_keyboard, get_profile, find_device, create_ticket, get_admins,
 )
+from bot.formatting import panel
 
 
 async def ticket_create_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     await query.edit_message_text(
-        "📝 <b>Создание заявки</b>\n\n"
-        "Введите <b>номер Киоска</b> (например: 123):\n"
-        "Или /cancel для отмены",
+        panel('Новая заявка',
+              "Введите <b>номер киоска</b> (например: 123):\n"
+              "Или /cancel для отмены"),
         parse_mode='HTML'
     )
     return TICKET_PAK

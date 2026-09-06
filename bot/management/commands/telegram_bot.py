@@ -4,6 +4,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 from telegram import BotCommand
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.handlers.start import start, menu_command
+from bot.handlers.stats import stats_handler
 from bot.handlers.register import register_start, register_phone, register_password, link_account, link_confirm, cancel, PHONE_WAIT, PASSWORD_WAIT
 from bot.handlers.tickets import (
     ticket_create_start, ticket_pak_handler, ticket_problem_handler,
@@ -40,16 +41,19 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query:
         await query.answer()
         await query.edit_message_text(
-            "📚 <b>Справка МедКиоск</b>\n\n"
-            "/start - Начало работы\n"
-            "/menu - Главное меню\n"
-            "/status - Статус Киоска\n"
-            "/edit - Редактировать заявку\n"
-            "/register - Регистрация\n"
-            "/link - Привязать аккаунт\n"
-            "/password - Сменить пароль (в личке)\n"
-            "/adduser - Добавить пользователя (при наличии права)\n"
-            "/unlink - Отвязать аккаунт от Telegram",
+            "📚 <b>МедКиоск — справка</b>\n"
+            "<code>────────────────────────────</code>\n\n"
+            "🚀 /start — начало работы\n"
+            "📱 /menu — главное меню\n"
+            "🔍 /status — статус киоска\n"
+            "📊 /stats — статистика по устройствам\n"
+            "🚑 /health — состояние сервера\n"
+            "📝 /edit — редактировать заявку\n"
+            "📝 /register — регистрация\n"
+            "🔗 /link — привязать аккаунт\n"
+            "🔐 /password — сменить пароль\n"
+            "➕ /adduser — добавить пользователя (право)\n"
+            "🔗 /unlink — отвязать Telegram",
             parse_mode='HTML'
         )
 
@@ -86,12 +90,16 @@ async def button_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🔙 В главное меню", callback_data='menu')]
         ])
         await query.edit_message_text(
-            "🔍 <b>Статус киоска</b>\n\n"
+            "🏥 <b>Статус киоска</b>\n"
+            "<code>────────────────────────────</code>\n\n"
             "Введите команду с номером киоска, например:\n"
-            "<code>/status 123</code>",
+            "<code>/status 123</code>\n"
+            "Или /menu для возврата в меню",
             parse_mode='HTML',
             reply_markup=markup
         )
+    elif data == 'stats':
+        return await stats_handler(update, context)
     elif data == 'cancel':
         await query.answer()
         await query.edit_message_text("❌ Отменено")
@@ -202,6 +210,7 @@ class Command(BaseCommand):
         app.add_handler(adduser_handler)
         app.add_handler(password_handler)
         app.add_handler(CommandHandler('unlink', unlink_command))
+        app.add_handler(CommandHandler('stats', stats_handler))
         app.add_handler(callback_handler)
         app.add_handler(CommandHandler('health', health_command))
         
@@ -211,6 +220,7 @@ class Command(BaseCommand):
                 BotCommand('menu', '📱 Главное меню'),
                 BotCommand('status', '🔍 Статус Киоска'),
                 BotCommand('edit', '📝 Редактировать заявку'),
+                BotCommand('stats', '📊 Статистика по устройствам'),
                 BotCommand('register', '📝 Регистрация'),
                 BotCommand('link', '🔗 Привязать аккаунт'),
                 BotCommand('password', '🔐 Сменить пароль'),

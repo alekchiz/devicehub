@@ -2,6 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from asgiref.sync import sync_to_async
 from bot.services import get_profile_sync, get_menu_stats_sync
+from bot.formatting import panel
 
 @sync_to_async
 def get_profile(telegram_id):
@@ -43,27 +44,30 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     stats = await get_menu_stats()
     role = profile['role_code']
 
-    header = (
-        f"🏥 <b>МедКиоск</b> · главное меню\n"
-        f"<code>────────────────────────────────</code>\n"
-        f"🖥 <b>Киоски:</b> 🟢 {stats['online']} · 🔴 {stats['offline']} · 🟡 {stats['repair']}\n"
-        f"📋 Открытых заявок: {stats['open']}\n"
-        f"👤 Роль: {profile['role']}"
+    header = panel(
+        'МедКиоск · главное меню',
+        (
+            f"Здравствуйте, <b>{profile['username']}</b> 👋\n"
+            f"Роль: {profile['role']}\n\n"
+            f"🖥 Киоски: 🟢 {stats['online']} · 🔴 {stats['offline']} · 🟡 {stats['repair']}\n"
+            f"📋 Открытых заявок: {stats['open']}"
+        ),
+        footer='Выберите действие ниже'
     )
 
     keyboard = []
-    keyboard.append([InlineKeyboardButton("✍️ Новая заявка", callback_data='ticket_create')])
-
-    row = [InlineKeyboardButton("📋 Мои заявки", callback_data='my_tickets')]
+    # Заявки
+    keyboard.append([InlineKeyboardButton('✍️ Новая заявка', callback_data='ticket_create')])
+    row = [InlineKeyboardButton('📋 Мои заявки', callback_data='my_tickets')]
     if role in ['admin', 'observer']:
-        row.append(InlineKeyboardButton("📊 Все заявки", callback_data='all_tickets'))
+        row.append(InlineKeyboardButton('📊 Все заявки', callback_data='all_tickets'))
     keyboard.append(row)
-
+    row = [InlineKeyboardButton('🔍 Статус киоска', callback_data='kiosk_status')]
+    row.append(InlineKeyboardButton('📈 Статистика', callback_data='stats'))
+    keyboard.append(row)
     if role in ['admin', 'technician']:
-        keyboard.append([InlineKeyboardButton("📝 Редактировать заявку", callback_data='edit_ticket')])
-
-    keyboard.append([InlineKeyboardButton("🔍 Статус киоска", callback_data='kiosk_status')])
-    keyboard.append([InlineKeyboardButton("❓ Помощь", callback_data='help')])
+        keyboard.append([InlineKeyboardButton('📝 Редактировать заявку', callback_data='edit_ticket')])
+    keyboard.append([InlineKeyboardButton('❓ Помощь', callback_data='help')])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -77,13 +81,14 @@ async def health_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     import urllib.request
     
     stats = get_server_stats()
-    
-    message = (
-        f"🏥 <b>Сервер</b>\n"
-        f"<code>──────────────────────</code>\n"
-        f"💻 CPU: {stats['cpu']}%\n"
-        f"🧠 RAM: {stats['ram']}%\n"
-        f"💾 Диск: {stats['disk']}%\n"
+
+    message = panel(
+        'Сервер МедКиоск',
+        (
+            f"💻 CPU: <b>{stats['cpu']}%</b>\n"
+            f"🧠 RAM: <b>{stats['ram']}%</b>\n"
+            f"💾 Диск: <b>{stats['disk']}%</b>"
+        )
     )
-    
+
     await update.message.reply_text(message, parse_mode='HTML')

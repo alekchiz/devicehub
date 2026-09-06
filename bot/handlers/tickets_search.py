@@ -5,6 +5,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from .tickets_common import (
     STATUS_EMOJI, SEARCH_QUERY, menu_keyboard, get_profile, search_tickets,
 )
+from bot.formatting import panel
 
 
 async def search_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -13,7 +14,8 @@ async def search_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['search_type'] = query.data
 
     await query.edit_message_text(
-        "🔍 <b>Поиск заявок</b>\n\nВведите часть номера Киоска или текст проблемы:",
+        panel('Поиск заявок',
+              'Введите часть номера киоска или текст проблемы:'),
         parse_mode='HTML'
     )
     return SEARCH_QUERY
@@ -31,7 +33,7 @@ async def search_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not tickets:
         await update.message.reply_text(
-            f"🔍 По запросу '<b>{q}</b>' ничего не найдено",
+            panel('Поиск заявок', f"По запросу <b>{q}</b> ничего не найдено"),
             parse_mode='HTML',
             reply_markup=menu_keyboard()
         )
@@ -48,7 +50,7 @@ async def search_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("🔙 В главное меню", callback_data='menu')])
 
     await update.message.reply_text(
-        f"🔍 <b>Результаты поиска:</b> '{q}'\nВыберите заявку:",
+        panel('Результаты поиска', f"Запрос: <b>{q}</b>\nВыберите заявку:"),
         parse_mode='HTML',
         reply_markup=InlineKeyboardMarkup(keyboard)
     )

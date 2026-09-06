@@ -10,6 +10,7 @@ from .tickets_common import (
     get_profile, get_my_tickets, get_all_tickets,
     get_ticket, can_edit_ticket, update_ticket,
 )
+from bot.formatting import panel
 
 
 async def edit_ticket_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -55,7 +56,7 @@ async def edit_ticket_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
     keyboard.append([InlineKeyboardButton("🔙 В главное меню", callback_data='menu')])
 
-    text = "📝 <b>Выберите заявку для редактирования:</b>"
+    text = panel('Редактирование заявки', 'Выберите заявку для изменения:')
     markup = InlineKeyboardMarkup(keyboard)
     if query:
         await query.edit_message_text(text, parse_mode='HTML', reply_markup=markup)
@@ -84,14 +85,15 @@ async def edit_ticket_select(update: Update, context: ContextTypes.DEFAULT_TYPE)
     context.user_data['edit_name'] = ticket.contact_name
     context.user_data['edit_phone'] = ticket.contact_phone
 
-    text = (
-        f"📝 <b>Редактирование заявки #{ticket.id}</b>\n\n"
-        f"Текущие данные:\n"
-        f"📦 Киоск: {ticket.device.hostname}\n"
-        f"📝 Проблема: {ticket.problem[:100]}\n"
-        f"👤 ФИО: {ticket.contact_name}\n"
-        f"📞 Телефон: {ticket.contact_phone}\n\n"
-        f"Что меняем?"
+    text = panel(
+        f"Редактирование заявки #{ticket.id}",
+        (
+            f"📦 Киоск: {ticket.device.hostname}\n"
+            f"📝 Проблема: {ticket.problem[:100]}\n"
+            f"👤 ФИО: {ticket.contact_name}\n"
+            f"📞 Телефон: {ticket.contact_phone}\n\n"
+            f"<b>Что меняем?</b>"
+        )
     )
 
     keyboard = [

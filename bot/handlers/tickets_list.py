@@ -6,6 +6,7 @@ from .tickets_common import (
     STATUS_EMOJI, format_ticket_message, menu_keyboard,
     get_profile, get_my_tickets, get_all_tickets, get_ticket,
 )
+from bot.formatting import panel
 
 
 async def my_tickets_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -17,7 +18,9 @@ async def my_tickets_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     tickets = await get_my_tickets(profile['user_id'])
 
     if not tickets:
-        await query.edit_message_text("📋 У вас пока нет заявок", reply_markup=menu_keyboard())
+        await query.edit_message_text(
+            panel('Мои заявки', 'Пока нет заявок'), parse_mode='HTML',
+            reply_markup=menu_keyboard())
         return ConversationHandler.END
 
     keyboard = []
@@ -32,7 +35,7 @@ async def my_tickets_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     keyboard.append([InlineKeyboardButton("🔙 В главное меню", callback_data='menu')])
 
     await query.edit_message_text(
-        "📋 <b>Мои заявки:</b>\nВыберите для просмотра:",
+        panel('Мои заявки', 'Выберите заявку для просмотра:'),
         parse_mode='HTML',
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -46,7 +49,9 @@ async def all_tickets_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     tickets = await get_all_tickets()
 
     if not tickets:
-        await query.edit_message_text("📊 Заявок пока нет", reply_markup=menu_keyboard())
+        await query.edit_message_text(
+            panel('Все заявки', 'Пока нет заявок'), parse_mode='HTML',
+            reply_markup=menu_keyboard())
         return ConversationHandler.END
 
     keyboard = []
@@ -61,7 +66,7 @@ async def all_tickets_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     keyboard.append([InlineKeyboardButton("🔙 В главное меню", callback_data='menu')])
 
     await query.edit_message_text(
-        "📊 <b>Все заявки:</b>\nВыберите для просмотра:",
+        panel('Все заявки', 'Выберите заявку для просмотра:'),
         parse_mode='HTML',
         reply_markup=InlineKeyboardMarkup(keyboard)
     )

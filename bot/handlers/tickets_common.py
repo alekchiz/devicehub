@@ -112,6 +112,16 @@ def get_device_full(hostname):
         device = Device.objects.select_related('owner', 'location', 'client', 'contact').get(hostname__iexact=hostname)
         tickets = list(Ticket.objects.filter(device=device).order_by('-created_at')[:3])
         repairs = list(Repair.objects.filter(device=device).order_by('-created_at')[:3])
+        daily = device.daily_exams.order_by('-date', '-pk').first()
+        verif = device.verifications.filter(
+            status='verified', valid_until__isnull=False
+        ).order_by('-valid_until').first()
+        verif_state = None
+        if verif:
+            from django.utils import timezone
+            days = (verif.valid_until - timezone.localdate()).days
+            state = 'expired' if days < 0 else ('soon' if days <= 30 else 'ok')
+            verif_state = (state, verif.valid_until)
         return {
             'found': True,
             'hostname': device.hostname,
@@ -125,8 +135,19 @@ def get_device_full(hostname):
             'last_mqtt': device.last_mqtt_message,
             'alco': device.alco,
             'tonometer': device.tonometer,
+            'alco_ok': device.alco_ok,
+            'tono_ok': device.tono_ok,
             'owner': device.owner.name if device.owner else None,
             'location': device.location.name if device.location else None,
+            'client': device.client.name if device.client else None,
+            'cpu_load': device.cpu_load,
+            'memory_percent': device.memory_percent,
+            'hdd_percent': device.hdd_percent,
+            'temperature': device.temperature,
+            'cpu_temperature': device.cpu_temperature,
+            'uptime_formatted': device.uptime_formatted,
+            'exams_today': daily.exams if daily else None,
+            'verif': verif_state,
             'tickets': tickets,
             'repairs': repairs,
         }

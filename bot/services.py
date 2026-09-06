@@ -103,6 +103,42 @@ def get_menu_stats_sync():
         'open': Ticket.objects.filter(status__in=['created', 'in_progress']).count(),
     }
 
+
+def get_fleet_stats_sync():
+    """Развёрнутая статистика по флоту (команда /stats и меню)."""
+    from datetime import timedelta
+
+    from django.db.models import Sum
+    from django.utils import timezone
+
+    from devices.models import DailyExam, Device, Verification
+    from tickets.models import Ticket
+
+    base = Device.objects.filter(hostname__regex=r'^\d{3,}$')
+    today = timezone.localdate()
+    soon_until = today + timedelta(days=30)
+    agg = DailyExam.objects.filter(date=today).aggregate(
+        exams=Sum('exams'), cancelled=Sum('cancelled'))
+
+    return {
+        'total': base.count(),
+        'online': base.filter(is_online=True, in_repair=False).count(),
+        'offline': base.filter(is_online=False, in_repair=False).count(),
+        'repair': base.filter(in_repair=True).count(),
+        'med_ready': base.filter(alco__contains='✅', tonometer__contains='✅').count(),
+        'med_total': base.count(),
+        'exams': agg['exams'] or 0,
+        'cancelled': agg['cancelled'] or 0,
+        'verif_soon': Verification.objects.filter(
+            status='verified', valid_until__gte=today,
+            valid_until__lte=soon_until).count(),
+        'verif_expired': Verification.objects.filter(
+            status='verified', valid_until__lt=today).count(),
+        'open_tickets': Ticket.objects.filter(
+            status__in=['created', 'in_progress']).count(),
+    }
+
+
 def update_ticket_sync(ticket_id, problem, contact_name, contact_phone, user):
     try:
         ticket = Ticket.objects.get(id=ticket_id)
