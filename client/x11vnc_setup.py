@@ -100,6 +100,14 @@ def generate_password():
         return raw.replace("+", "").replace("/", "").replace("=", "")[:16] or "xk7vQn4Wzq"
 
 
+def stop_existing():
+    """Гасит старые экземпляры x11vnc и освобождает порт 5900."""
+    run(["pkill", "-f", "x11vnc"])
+    if sh("command -v fuser 2>/dev/null; echo $?") == "0":
+        run(["fuser", "-k", "5900/tcp"])
+    time.sleep(2)
+
+
 def main():
     check_root()
     apt_install_x11vnc()
@@ -174,6 +182,7 @@ WantedBy=graphical.target
 
     run(["systemctl", "daemon-reload"])
     run(["systemctl", "enable", "x11vnc.service"])
+    stop_existing()
     run(["systemctl", "restart", "x11vnc.service"])
 
     time.sleep(3)
