@@ -597,10 +597,9 @@ class ImportExamsTests(TestCase):
         resp = self.client.get(reverse('dashboard'))
         self.assertContains(resp, 'Осмотров сегодня')
         self.assertContains(resp, 'Отменено сегодня')
-        self.assertContains(resp, 'ПАК отчиталось')
         self.assertContains(resp, 'id="examsToday">15')      # 10 + 5 осмотров
         self.assertContains(resp, 'id="cancelledToday">3')   # 2 + 1 отменено
-        self.assertContains(resp, 'id="paksToday">2')        # отчиталось 2 ПАК
+        self.assertNotContains(resp, 'id="paksToday"')
 
 
 class DashboardNonstandardTests(TestCase):
@@ -814,3 +813,57 @@ class SshHelperTests(TestCase):
         ok, msg = ssh_change_password(self.device, 'Pochta@medQaZ')
         self.assertTrue(ok)
         self.assertEqual(m.call_count, 2)  # глобальный после неудачных
+
+    @override_settings(
+        DEVICE_SSH_PUBLIC_KEYS=['ssh-ed25519 AAAAFakeKey server@host',
+                                'ssh-ed25519 AAAAMacKey user@mac'])
+    @patch('devices.views.subprocess.run')
+    def test_change_password_installs_authorized_keys(self, m):
+        self.device.ssh_password = 'dev-pass'
+        self.device.save()
+
+        def fake(args, capture_output=True, text=True, timeout=20):
+            pwd = args[2]
+            remote = args[-1]
+            if pwd == 'dev-pass':
+                self.assertIn('chpasswd', remote)
+                self.assertIn('AAAFakeKey', remote)   # ключ сервера
+                self.assertIn('AAAMacKey', remote)    # личный ключ Мака
+                self.assertIn('authorized_keys', remote)
+                return SimpleNamespace(returncode=0, stdout='', stderr='')
+            return self._auth_fail(pwd)
+
+        m.side_effect = fake
+        from devices.views import ssh_change_password
+        ok, msg = ssh_change_password(self.device, 'NewPass123')
+        self.assertTrue(ok)
+
+
+@override_settings(DEVICE_SSH_PASSWORD='Pochta@medQaZ',
+                   DEVICE_SSH_PASSWORDS=['Pochta@medQaZ', 'MC$Termina1'])
+class ProbeSshPasswordsCommandTests(TestCase):
+    @patch('devices.management.commands.probe_ssh_passwords.subprocess.run')
+    def test_probe_finds_and_saves_password(self, m):
+        from django.core.management import call_command
+        device = Device.objects.create(hostname='111', vpn_ip='10.0.0.1')
+
+        def fake(args, capture_output=True, text=True, timeout=8):
+            pwd = args[2]
+            if pwd == 'MC$Termina1':
+                return SimpleNamespace(returncode=0, stdout='111\n', stderr='')
+            return SimpleNamespace(returncode=5, stdout='', stderr='Permission denied.')
+
+        m.side_effect = fake
+        call_command('probe_ssh_passwords', save=True)
+
+        device.refresh_from_db()
+        self.assertEqual(device.ssh_password, 'MC$Termina1')
+
+    @patch('devices.management.commands.probe_ssh_passwords.subprocess.run')
+    def test_probe_reports_unreachable(self, m):
+        from django.core.management import call_command
+        Device.objects.create(hostname='222', vpn_ip='10.0.0.2')
+        m.side_effect = lambda args, capture_output=True, text=True, timeout=8: (
+            SimpleNamespace(returncode=5, stdout='', stderr='Permission denied.')
+        )
+        call_command('probe_ssh_passwords')

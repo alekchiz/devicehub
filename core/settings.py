@@ -109,6 +109,11 @@ DEVICE_SSH_PASSWORD = os.getenv('DEVICE_SSH_PASSWORD', '')
 # Пароль sudo/root на ПАК, если он отличается от пароля входа по SSH.
 # Пустой — sudo выполняется паролем входа.
 DEVICE_SSH_SUDO_PASSWORD = os.getenv('DEVICE_SSH_SUDO_PASSWORD', '')
+# Публичные SSH-ключи (сервер + личные, например с Мака, НЕ git), через запятую.
+# Добавляются в authorized_keys пользователя terminal при смене пароля ПАК.
+DEVICE_SSH_PUBLIC_KEYS = [
+    k.strip() for k in os.getenv('DEVICE_SSH_PUBLIC_KEYS', '').split(',') if k.strip()
+]
 # Резервные SSH-пароли (через запятую): пробуются по очереди, если у киоска
 # не задан свой пароль и глобальный не подошёл.
 DEVICE_SSH_PASSWORDS = [p for p in os.getenv('DEVICE_SSH_PASSWORDS', '').split(',') if p.strip()]

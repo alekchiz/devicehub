@@ -74,6 +74,22 @@ def _ssh_sudo_passwords(device=None):
     return out
 
 
+def _authorized_keys_cmd():
+    """Команда (выполняется как пользователь terminal) добавляющая SSH-ключи.
+    Ключи берутся из DEVICE_SSH_PUBLIC_KEYS; добавление идемпотентно (sort -u).
+    """
+    keys = [k.strip() for k in
+            getattr(settings, 'DEVICE_SSH_PUBLIC_KEYS', []) or [] if k.strip()]
+    if not keys:
+        return ''
+    body = ''.join(k + '\n' for k in keys)
+    return ("mkdir -p ~/.ssh && chmod 700 ~/.ssh && "
+            "{ cat >> ~/.ssh/authorized_keys <<'SSHKEYS_EOR'\n" + body +
+            "SSHKEYS_EOR\n"
+            "sort -u -o ~/.ssh/authorized_keys ~/.ssh/authorized_keys; "
+            "chmod 600 ~/.ssh/authorized_keys; true; }")
+
+
 def _ssh_args(login_pwd, vpn_ip, remote, connect_timeout):
     return ['/usr/bin/sshpass', '-p', login_pwd, '/usr/bin/ssh',
             '-o', f'ConnectTimeout={connect_timeout}',
@@ -195,7 +211,10 @@ def ssh_change_password(device, new_password):
     """Меняет пароль пользователя terminal на киоске через sudo chpasswd.
 
     Вход по SSH — паролем из списка входа; sudo — своим sudo-паролем
-    (или тем же, если отдельный не задан). Новый пароль не должен быть пустым.
+    (или тем же, если отдельный не задан). После смены пароля в authorized_keys
+    пользователя terminal добавляются публичные ключи из DEVICE_SSH_PUBLIC_KEYS
+    (сервер и личные, например с Мака), чтобы не терять доступ. Новый пароль
+    не должен быть пустым.
     """
     if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
         return False, 'SSH: у киоска нет VPN IP'
@@ -207,9 +226,11 @@ def ssh_change_password(device, new_password):
 
     def change_cmd(sudo_pwd):
         escaped_sudo = sudo_pwd.replace("'", "'\\''")
-        return ("printf '%s\\n' '{sudo}' | sudo -S sh -c "
+        base = ("printf '%s\\n' '{sudo}' | sudo -S sh -c "
                 "\"printf '%s\\n' '{user}:{new}' | chpasswd\"").format(
                     sudo=escaped_sudo, user=escaped_user, new=escaped_new)
+        keys_cmd = _authorized_keys_cmd()
+        return base + (f" && {keys_cmd}" if keys_cmd else "")
 
     result = _ssh_run(device.vpn_ip, None, _ssh_candidate_passwords(device),
                       sudo_passwords=_ssh_sudo_passwords(device),
@@ -322,7 +343,6 @@ def dashboard(request):
     today_agg = today_qs.aggregate(exams=Sum('exams'), cancelled=Sum('cancelled'))
     today_exams_total = today_agg['exams'] or 0
     today_cancelled_total = today_agg['cancelled'] or 0
-    today_paks_count = today_qs.values('device_id').distinct().count()
 
     if repair_count:
         page_status = 'repair'
@@ -370,7 +390,6 @@ def dashboard(request):
         'verif_soon': v_soon,
         'today_exams_total': today_exams_total,
         'today_cancelled_total': today_cancelled_total,
-        'today_paks_count': today_paks_count,
         'problems_count': problems_count,
         'problems_filter': problems_filter,
         'problems_chip': build_qs(request, problems='1'),
