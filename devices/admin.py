@@ -32,6 +32,7 @@ class DeviceAdmin(admin.ModelAdmin):
     list_display = (
         'hostname', 'is_online', 'in_repair', 'vpn_ip', 'anydesk',
         'software', 'cpu_load', 'owner', 'client', 'location', 'last_updated',
+        'password_migrated',
     )
     list_filter = ('owner', 'client', 'location', 'is_online', 'in_repair', 'broker')
     search_fields = ('hostname', 'vpn_ip', 'anydesk', 'sn', 'os')

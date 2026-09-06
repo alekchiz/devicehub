@@ -612,6 +612,13 @@ class DashboardNonstandardTests(TestCase):
         self.assertContains(resp, 'nonstandard')
         self.assertContains(resp, 'Новый')
 
+    def test_migrated_password_badge_on_card(self):
+        Device.objects.create(hostname='666', is_online=True, password_migrated=True)
+        self.client.force_login(_technician())
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'title="Пароль обновлён"')
+
 
 class AdminPagesTests(TestCase):
     def setUp(self):
