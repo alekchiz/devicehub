@@ -15,7 +15,7 @@
 #
 # Переменные окружения:
 #   MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASS — параметры подключения.
-#   MQTT_PASS обязателен (в коде пароля нет).
+#   По умолчанию (зашиты в код для работы без настроек): pak / p0chta.
 #   MQC_VERBOSE=1 — печатать весь JSON перед отправкой.
 
 from __future__ import print_function
@@ -47,8 +47,9 @@ except ImportError:
 SERVER_IP = os.getenv("MQTT_HOST", "tihon.grigorenko.online")
 SERVER_PORT = int(os.getenv("MQTT_PORT", "1883"))
 MQTT_USER = os.getenv("MQTT_USER", "pak")
-# Пароль читается только из окружения (напр. через MQTT_PASS в cron-записи).
-MQTT_PASS = os.getenv("MQTT_PASS", "")
+# Пароль: по умолчанию из файла (для работы на киоске без env); можно переопределить
+# через MQTT_PASS в окружении / cron.
+MQTT_PASS = os.getenv("MQTT_PASS", "p0chta")
 
 MQTT_PROTOCOL = mqtt.MQTTv311
 
