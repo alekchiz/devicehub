@@ -5,6 +5,7 @@ from telegram import BotCommand
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.handlers.start import start, menu_command
 from bot.handlers.stats import stats_handler
+from bot.formatting import panel, main_keyboard
 from bot.handlers.register import register_start, register_phone, register_password, link_account, link_confirm, cancel, PHONE_WAIT, PASSWORD_WAIT
 from bot.handlers.tickets import (
     ticket_create_start, ticket_pak_handler, ticket_problem_handler,
@@ -18,6 +19,7 @@ from bot.handlers.tickets import (
     STATUS_HOSTNAME
 )
 from bot.handlers.start import start, menu_command, health_command
+from bot.handlers.tickets_list import my_tickets_message
 from bot.handlers.users import (
     add_user_start, add_user_username, add_user_password, add_user_role,
     unlink_command, ADD_USERNAME, ADD_PASSWORD, ADD_ROLE,
@@ -56,6 +58,38 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🔗 /unlink — отвязать Telegram",
             parse_mode='HTML'
         )
+
+
+async def help_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = panel(
+        'МедКиоск — справка',
+        '\n'.join([
+            '🚀 /start — начало работы',
+            '📱 /menu — главное меню',
+            '🔍 Кнопка «Статус киоска»',
+            '📊 Кнопка «Статистика»',
+            '✍️ Кнопка «Новая заявка»',
+            '📝 /register — регистрация',
+            '🔗 /link — привязать аккаунт',
+            '🔐 /password — сменить пароль',
+            '🚑 /health — состояние сервера',
+        ])
+    )
+    await update.message.reply_text(text, parse_mode='HTML', reply_markup=main_keyboard())
+
+
+async def reply_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает нажатия reply-кнопок (текстовые метки)."""
+    text = (update.message.text or '').strip()
+    if text == '📊 Статистика':
+        return await stats_handler(update, context)
+    if text == '❓ Помощь':
+        return await help_message(update, context)
+    if text == '🚑 Сервер':
+        return await health_command(update, context)
+    if text == '📋 Мои заявки':
+        return await my_tickets_message(update, context)
+    return
 
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await menu_command(update, context)
@@ -134,7 +168,10 @@ class Command(BaseCommand):
         )
         
         ticket_handler = ConversationHandler(
-            entry_points=[CallbackQueryHandler(ticket_create_start, pattern='^ticket_create$')],
+            entry_points=[
+                CallbackQueryHandler(ticket_create_start, pattern='^ticket_create$'),
+                MessageHandler(filters.Text('✍️ Новая заявка'), ticket_create_start),
+            ],
             states={
                 TICKET_PAK: [MessageHandler(filters.TEXT & ~filters.COMMAND, ticket_pak_handler)],
                 TICKET_PROBLEM: [MessageHandler(filters.TEXT & ~filters.COMMAND, ticket_problem_handler)],
@@ -170,7 +207,10 @@ class Command(BaseCommand):
         )
         
         status_handler = ConversationHandler(
-            entry_points=[CommandHandler('status', status_start)],
+            entry_points=[
+                CommandHandler('status', status_start),
+                MessageHandler(filters.Text('🔍 Статус киоска'), status_start),
+            ],
             states={
                 STATUS_HOSTNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, status_result)],
             },
@@ -213,6 +253,7 @@ class Command(BaseCommand):
         app.add_handler(CommandHandler('stats', stats_handler))
         app.add_handler(callback_handler)
         app.add_handler(CommandHandler('health', health_command))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply_router))
         
         async def set_commands():
             await app.bot.set_my_commands([

@@ -117,6 +117,22 @@
     </div>
 </div>
 
+<!-- Осмотры за неделю -->
+<div class="filter-card card mb-3">
+    <div class="card-body p-3">
+        <div class="stat-label mb-2"><i class="bi bi-bar-chart"></i> Осмотры за неделю</div>
+        <div class="week-chart">
+            {% for x in week_exams %}
+            <div class="wc-col" title="{{ x.date|date:'d.m' }} — {{ x.total }}">
+                <span class="wc-val">{{ x.total }}</span>
+                <div class="wc-bar"><div class="wc-fill" style="height:{% widthratio x.total week_max 100 %}%;"></div></div>
+                <span class="wc-label">{{ x.date|date:'d.m' }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
 <!-- Поиск и статус -->
 <div class="filter-card card mb-3">
     <div class="card-body p-3">
@@ -213,6 +229,14 @@
                     <a href="anydesk:{{ device.anydesk }}" class="ad-link" onclick="event.stopPropagation();" title="Подключиться по AnyDesk">
                         <i class="bi bi-display"></i>{{ device.anydesk }}
                     </a>
+                    {% endif %}
+                    {% if user.profile.role == 'admin' and device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
+                    <form method="post" action="{% url 'device_reboot' device.pk %}" class="dc-form"
+                          onclick="event.stopPropagation();"
+                          onsubmit="return confirm('Перезагрузить киоск {{ device.hostname }}?');">
+                        {% csrf_token %}
+                        <button type="submit" class="dc-btn" title="Перезагрузить"><i class="bi bi-arrow-clockwise"></i></button>
+                    </form>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -394,6 +418,8 @@ function applyStatus(payload) {
     setTxt('headTotal', payload.total);
     setTxt('headOnline', payload.online);
     setTxt('headOffline', payload.offline);
+    setTxt('examsToday', payload.exams_today);
+    setTxt('cancelledToday', payload.cancelled_today);
 
     // Уведомление во вкладке при появлении новых оффлайн-киосков.
     if (payload.offline > offlineNotif.count) {

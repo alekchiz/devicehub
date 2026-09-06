@@ -1,5 +1,6 @@
 import subprocess
 import logging
+from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -350,6 +351,14 @@ def dashboard(request):
     today_agg = today_qs.aggregate(exams=Sum('exams'), cancelled=Sum('cancelled'))
     today_exams_total = today_agg['exams'] or 0
     today_cancelled_total = today_agg['cancelled'] or 0
+    # Осмотры по дням за последнюю неделю (для мини-графика дашборда).
+    week_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    week_agg = dict(
+        DailyExam.objects.filter(date__gte=week_days[0], date__lte=today)
+        .values('date').annotate(total=Sum('exams'))
+        .values_list('date', 'total'))
+    week_exams = [{'date': d, 'total': week_agg.get(d, 0)} for d in week_days]
+    week_max = max((x['total'] for x in week_exams), default=1) or 1
 
     if repair_count:
         page_status = 'repair'
@@ -397,6 +406,8 @@ def dashboard(request):
         'verif_soon': v_soon,
         'today_exams_total': today_exams_total,
         'today_cancelled_total': today_cancelled_total,
+        'week_exams': week_exams,
+        'week_max': week_max,
         'problems_count': problems_count,
         'problems_filter': problems_filter,
         'problems_chip': build_qs(request, problems='1'),
@@ -461,12 +472,18 @@ def device_status_feed(request):
 
     page_status = 'repair' if repair else ('warn' if offline else 'ok')
 
+    today = timezone.localdate()
+    exam_agg = DailyExam.objects.filter(date=today).aggregate(
+        exams=Sum('exams'), cancelled=Sum('cancelled'))
+
     payload = {
         'total': total,
         'online': online,
         'offline': offline,
         'repair': repair,
         'page_status': page_status,
+        'exams_today': exam_agg['exams'] or 0,
+        'cancelled_today': exam_agg['cancelled'] or 0,
         'now': timezone.localtime().strftime('%H:%M:%S'),
         'devices': {},
     }
@@ -484,6 +501,19 @@ def device_status_feed(request):
         }
 
     return JsonResponse(payload)
+
+
+@user_passes_test(is_admin)
+def device_reboot(request, pk):
+    """Перезагрузка одного киоска (кнопка на карточке дашборда)."""
+    device = get_object_or_404(Device, pk=pk)
+    result = ssh_reboot(device)
+    if result.returncode == 0:
+        messages.success(request, f'{device.hostname}: перезагрузка отправлена')
+    else:
+        messages.warning(
+            request, f'{device.hostname}: {result.stderr.strip() or "SSH недоступен"}')
+    return redirect('dashboard')
 
 def device_detail_modal(request, pk):
     device = get_object_or_404(Device, pk=pk)

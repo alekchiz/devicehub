@@ -1,5 +1,6 @@
 """Единый стиль сообщений и клавиатур бота МедКиоск."""
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import KeyboardButton, ReplyKeyboardMarkup
 
 DIV = '<code>────────────────────────────</code>'
 DIV_T = '<code>────────────────────────────────</code>'
@@ -107,3 +108,17 @@ def menu_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton('🔙 Главное меню', callback_data='menu')],
     ])
+
+
+def main_keyboard():
+    """Постоянные кнопки внизу чата (reply keyboard)."""
+    rows = [
+        ['🔍 Статус киоска', '📊 Статистика'],
+        ['✍️ Новая заявка', '📋 Мои заявки'],
+        ['❓ Помощь', '🚑 Сервер'],
+    ]
+    return ReplyKeyboardMarkup(
+        [[KeyboardButton(label) for label in row] for row in rows],
+        resize_keyboard=True,
+        input_field_placeholder='Выберите действие...',
+    )
