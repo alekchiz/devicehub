@@ -53,6 +53,7 @@ class Device(models.Model):
     ssh_password = models.CharField(max_length=100, blank=True, verbose_name="SSH пароль")
     password_migrated = models.BooleanField(default=False, verbose_name="Пароль мигрирован")
     vnc_ready = models.BooleanField(default=False, verbose_name="VNC настроен")
+    agent_deployed = models.BooleanField(default=False, verbose_name="info2mqtt загружен")
     os = models.CharField(max_length=100, blank=True, verbose_name="ОС")
     ver = models.CharField(max_length=10, blank=True)
     secureboot = models.CharField(max_length=20, blank=True, verbose_name="Secure Boot")

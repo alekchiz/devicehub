@@ -921,3 +921,21 @@ class VncSetupViewTests(TestCase):
         device = Device.objects.create(hostname='556', vpn_ip='10.0.0.6')
         resp = self.client.post(reverse('device_vnc_setup', args=[device.pk]))
         self.assertEqual(resp.status_code, 302)
+
+
+class DeployAgentViewTests(TestCase):
+    @patch('devices.views._scp_put')
+    def test_deploy_agent_marks_deployed(self, m):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+        admin = User.objects.create_user(username='agadmin', password='p')
+        admin.profile.role = 'admin'
+        admin.profile.save()
+        device = Device.objects.create(hostname='557', vpn_ip='10.0.0.7')
+        self.client.force_login(admin)
+        m.return_value = (True, 'ok')
+
+        resp = self.client.post(reverse('device_deploy_agent', args=[device.pk]))
+        self.assertRedirects(resp, reverse('device_detail_page', args=[device.pk]))
+        device.refresh_from_db()
+        self.assertTrue(device.agent_deployed)

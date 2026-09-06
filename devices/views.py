@@ -178,6 +178,30 @@ def ssh_reboot(device):
                     sudo_cmd=reboot_cmd)
 
 
+def _scp_put(device, local_path, remote_path):
+    """Копирует локальный файл на киоск по SCP (первый рабочий пароль)."""
+    for pwd in _ssh_candidate_passwords(device):
+        if not pwd:
+            continue
+        try:
+            result = subprocess.run(
+                ['/usr/bin/sshpass', '-p', pwd, '/usr/bin/scp',
+                 '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=no',
+                 '-o', 'UserKnownHostsFile=/dev/null',
+                 local_path, f'{settings.DEVICE_SSH_USER}@{device.vpn_ip}:{remote_path}'],
+                capture_output=True, text=True, timeout=25
+            )
+        except subprocess.TimeoutExpired:
+            return False, 'Таймаут копирования'
+        if result.returncode == 0:
+            return True, f'Файл загружен в {remote_path}'
+        lower_err = result.stderr.lower()
+        if result.returncode != 5 and 'permission denied' not in lower_err:
+            return False, result.stderr.strip() or 'Ошибка копирования'
+    return False, 'Не удалось подключиться (проверьте SSH-пароль киоска)'
+
+
+@login_required
 def upload_file_to_device(device, uploaded_file, target_path):
     """Копирует загруженный файл на киоск по SCP (первый рабочий пароль)."""
     import os as _os
@@ -189,25 +213,7 @@ def upload_file_to_device(device, uploaded_file, target_path):
             for chunk in uploaded_file.chunks():
                 tf.write(chunk)
             tmp = tf.name
-
-        for pwd in _ssh_candidate_passwords(device):
-            if not pwd:
-                continue
-            result = subprocess.run(
-                ['/usr/bin/sshpass', '-p', pwd, '/usr/bin/scp',
-                 '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=no',
-                 '-o', 'UserKnownHostsFile=/dev/null',
-                 tmp, f'{settings.DEVICE_SSH_USER}@{device.vpn_ip}:{target_path}'],
-                capture_output=True, text=True, timeout=25
-            )
-            if result.returncode == 0:
-                return True, f'Файл загружен в {target_path}'
-            lower_err = result.stderr.lower()
-            if result.returncode != 5 and 'permission denied' not in lower_err:
-                return False, result.stderr.strip() or 'Ошибка копирования'
-        return False, 'Не удалось подключиться (проверьте SSH-пароль киоска)'
-    except subprocess.TimeoutExpired:
-        return False, 'Таймаут копирования'
+        return _scp_put(device, tmp, target_path)
     finally:
         if tmp and _os.path.exists(tmp):
             _os.remove(tmp)
@@ -674,6 +680,28 @@ def device_vnc_setup(request, pk):
         else:
             messages.warning(
                 request, f'{device.hostname}: {result.stderr.strip() or "ошибка настройки VNC"}')
+    return redirect('device_detail_page', pk=pk)
+
+
+@user_passes_test(is_admin)
+def device_deploy_agent(request, pk):
+    """Закидывает info2mqtt.py на киоск (SCP) и ставит agent_deployed."""
+    device = get_object_or_404(Device, pk=pk)
+    if request.method == 'POST':
+        if not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
+            messages.error(request, f'{device.hostname}: нет VPN IP')
+            return redirect('device_detail_page', pk=pk)
+        import os as _os
+        local = _os.path.join(settings.BASE_DIR, 'client', 'info2mqtt.py')
+        if not _os.path.exists(local):
+            messages.error(request, 'Файл info2mqtt.py не найден в репозитории (client/)')
+            return redirect('device_detail_page', pk=pk)
+        ok, msg = _scp_put(device, local, '/home/terminal/rtk/info2mqtt.py')
+        if ok:
+            Device.objects.filter(pk=device.pk).update(agent_deployed=True)
+            messages.success(request, f'{device.hostname}: info2mqtt.py загружен и обновлён')
+        else:
+            messages.warning(request, f'{device.hostname}: {msg}')
     return redirect('device_detail_page', pk=pk)
 
 

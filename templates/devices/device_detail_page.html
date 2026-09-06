@@ -153,6 +153,15 @@
                 {% else %}
                 <span class="ns-badge" style="vertical-align:middle;" title="VNC ещё не настроен"><i class="bi bi-key"></i></span>
                 {% endif %}
+                <form method="post" action="{% url 'device_deploy_agent' device.pk %}" class="d-inline-block me-2"
+                      onsubmit="return confirm('Закинуть обновлённый info2mqtt.py на {{ device.hostname }}?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-send"></i> Обновить info2mqtt</button>
+                </form>
+                {% if device.agent_deployed %}
+                <span class="ns-badge" style="background:#1f9d55;color:#fff;vertical-align:middle;"
+                      title="info2mqtt.py обновлён на киоске"><i class="bi bi-check-circle"></i> агент ✓</span>
+                {% endif %}
                 <a href="{% url 'device_reboot' device.pk %}" class="btn btn-outline-danger btn-sm me-2"
                    onclick="return confirm('Перезагрузить {{ device.hostname }}?')">
                     <i class="bi bi-power"></i> Reboot
