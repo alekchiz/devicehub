@@ -57,35 +57,80 @@ def _ssh_candidate_passwords(device=None):
     return candidates
 
 
-def _ssh_run(vpn_ip, command, candidates, sudo_reboot=False):
-    """Пробует каждый пароль до первого успешного подключения."""
-    for pwd in candidates:
-        if sudo_reboot:
-            escaped = pwd.replace("'", "'\\''")
-            remote = "printf '%s\\n' '{pwd}' | sudo -S reboot".format(pwd=escaped)
-            args = ['/usr/bin/sshpass', '-p', pwd, '/usr/bin/ssh',
-                    '-o', 'ConnectTimeout=3', '-o', 'StrictHostKeyChecking=no',
-                    '-o', 'UserKnownHostsFile=/dev/null',
-                    f'{settings.DEVICE_SSH_USER}@{vpn_ip}', remote]
-            timeout = 10
-        else:
-            args = ['/usr/bin/sshpass', '-p', pwd, '/usr/bin/ssh',
-                    '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=no',
-                    '-o', 'UserKnownHostsFile=/dev/null',
-                    f'{settings.DEVICE_SSH_USER}@{vpn_ip}', command]
-            timeout = 15
-        try:
-            result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
-        except subprocess.TimeoutExpired:
-            return _SSHFailed('SSH: таймаут подключения')
-        lower_err = result.stderr.lower()
-        auth_failed = (
-            result.returncode == 5 or
-            'permission denied' in lower_err or
-            'authentication' in lower_err or
-            ('denied.' in lower_err)
-        )
-        if not auth_failed:
+def _ssh_sudo_passwords(device=None):
+    """Пароли для sudo: сначала отдельный sudo-пароль, затем пароли входа.
+    Если на ПАК пароль входа и пароль sudo совпадают, отдельный sudo-пароль
+    не задан — и тогда sudo выполняется паролем входа (обратная совместимость).
+    """
+    seen, pool, out = set(), [], []
+    sudo_pw = getattr(settings, 'DEVICE_SSH_SUDO_PASSWORD', '')
+    if sudo_pw:
+        pool.append(sudo_pw)
+    pool.extend(_ssh_candidate_passwords(device))
+    for pwd in pool:
+        if pwd and pwd not in seen:
+            seen.add(pwd)
+            out.append(pwd)
+    return out
+
+
+def _ssh_args(login_pwd, vpn_ip, remote, connect_timeout):
+    return ['/usr/bin/sshpass', '-p', login_pwd, '/usr/bin/ssh',
+            '-o', f'ConnectTimeout={connect_timeout}',
+            '-o', 'StrictHostKeyChecking=no',
+            '-o', 'UserKnownHostsFile=/dev/null',
+            f'{settings.DEVICE_SSH_USER}@{vpn_ip}', remote]
+
+
+def _ssh_auth_failed(result):
+    """Признак ошибки аутентификации самого SSH-подключения."""
+    err = (result.stderr or '').lower()
+    return result.returncode == 5 or (
+        'permission denied' in err or
+        'authentication' in err or
+        'denied.' in err
+    )
+
+
+def _sudo_auth_failed(result):
+    """Признак неудачного sudo: неверный sudo-пароль или нет прав."""
+    err = (result.stderr or '').lower()
+    return any(k in err for k in (
+        'incorrect password', 'try again', 'no password',
+        'authentication failure', 'not in sudoers',
+    ))
+
+
+def _run_ssh(args, timeout):
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return _SSHFailed('SSH: таймаут подключения')
+
+
+def _ssh_run(vpn_ip, command, candidates, sudo_passwords=None, sudo_cmd=None, timeout=15):
+    """Выполняет команду по SSH, пробуя каждый пароль входа по очереди.
+
+    sudo_cmd — функция, получающая sudo-пароль и возвращающая удалённую команду.
+    При ней для каждого пароля входа перебираются sudo-пароли (сначала отдельный
+    sudo-пароль, затем пароли входа) из-за возможного их различия на ПАК.
+    """
+    if sudo_cmd is not None:
+        for login_pwd in candidates:
+            for sudo_pwd in sudo_passwords or ():
+                args = _ssh_args(login_pwd, vpn_ip, sudo_cmd(sudo_pwd), 5)
+                result = _run_ssh(args, 10)
+                if _ssh_auth_failed(result):
+                    break          # этот пароль входа не подошёл — следующий
+                if _sudo_auth_failed(result):
+                    continue       # вход есть, но sudo-пароль не подошёл
+                return result
+        return _SSHFailed()
+
+    for login_pwd in candidates:
+        args = _ssh_args(login_pwd, vpn_ip, command, 5)
+        result = _run_ssh(args, timeout)
+        if not _ssh_auth_failed(result):
             return result
     return _SSHFailed()
 
@@ -98,10 +143,17 @@ def ssh_execute(device, command):
 
 
 def ssh_reboot(device):
-    """Перезагрузка киоска через sudo (пробует несколько паролей)."""
+    """Перезагрузка киоска через sudo (раздельные пароли входа и sudo)."""
     if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
         return _SSHFailed('SSH: у киоска нет VPN IP')
-    return _ssh_run(device.vpn_ip, None, _ssh_candidate_passwords(device), sudo_reboot=True)
+
+    def reboot_cmd(sudo_pwd):
+        escaped = sudo_pwd.replace("'", "'\\''")
+        return f"printf '%s\\n' '{escaped}' | sudo -S reboot"
+
+    return _ssh_run(device.vpn_ip, None, _ssh_candidate_passwords(device),
+                    sudo_passwords=_ssh_sudo_passwords(device),
+                    sudo_cmd=reboot_cmd)
 
 
 def upload_file_to_device(device, uploaded_file, target_path):
@@ -142,8 +194,8 @@ def upload_file_to_device(device, uploaded_file, target_path):
 def ssh_change_password(device, new_password):
     """Меняет пароль пользователя terminal на киоске через sudo chpasswd.
 
-    Подключается любым рабочим паролем из списка (свой киоска / общий / резервные),
-    затем выставляет новый пароль. Новый пароль не должен быть пустым.
+    Вход по SSH — паролем из списка входа; sudo — своим sudo-паролем
+    (или тем же, если отдельный не задан). Новый пароль не должен быть пустым.
     """
     if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
         return False, 'SSH: у киоска нет VPN IP'
@@ -151,34 +203,20 @@ def ssh_change_password(device, new_password):
         return False, 'Не указан новый пароль'
 
     escaped_user = settings.DEVICE_SSH_USER.replace("'", "'\\''")
-    for current in _ssh_candidate_passwords(device):
-        escaped_cur = current.replace("'", "'\\''")
-        escaped_new = new_password.replace("'", "'\\''")
-        remote = ("printf '%s\\n' '{cur}' | sudo -S sh -c "
-                  "\"printf '%s\\n' '{user}:{new}' | chpasswd\"").format(
-                      cur=escaped_cur, user=escaped_user, new=escaped_new)
-        args = ['/usr/bin/sshpass', '-p', current, '/usr/bin/ssh',
-                '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=no',
-                '-o', 'UserKnownHostsFile=/dev/null',
-                f'{settings.DEVICE_SSH_USER}@{device.vpn_ip}', remote]
-        try:
-            result = subprocess.run(args, capture_output=True, text=True, timeout=20)
-        except subprocess.TimeoutExpired:
-            return False, 'SSH: таймаут подключения'
+    escaped_new = new_password.replace("'", "'\\''")
 
-        lower_err = result.stderr.lower()
-        auth_failed = (
-            result.returncode == 5 or
-            'permission denied' in lower_err or
-            'authentication' in lower_err or
-            'denied.' in lower_err
-        )
-        if auth_failed:
-            continue
-        if result.returncode != 0:
-            return False, result.stderr.strip() or 'Ошибка смены пароля'
-        return True, f'Пароль киоска изменён'
-    return False, 'Не удалось подключиться ни одним паролем'
+    def change_cmd(sudo_pwd):
+        escaped_sudo = sudo_pwd.replace("'", "'\\''")
+        return ("printf '%s\\n' '{sudo}' | sudo -S sh -c "
+                "\"printf '%s\\n' '{user}:{new}' | chpasswd\"").format(
+                    sudo=escaped_sudo, user=escaped_user, new=escaped_new)
+
+    result = _ssh_run(device.vpn_ip, None, _ssh_candidate_passwords(device),
+                      sudo_passwords=_ssh_sudo_passwords(device),
+                      sudo_cmd=change_cmd)
+    if result.returncode != 0:
+        return False, result.stderr.strip() or 'Ошибка смены пароля'
+    return True, 'Пароль киоска изменён'
 
 @login_required
 def dashboard(request):

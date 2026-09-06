@@ -106,6 +106,9 @@ MQTT_DAY_TOPICS = os.getenv('MQTT_DAY_TOPICS', 'pak/day,client/day')
 # Доступ по SSH к киоскам (используется в views.py)
 DEVICE_SSH_USER = os.getenv('DEVICE_SSH_USER', 'terminal')
 DEVICE_SSH_PASSWORD = os.getenv('DEVICE_SSH_PASSWORD', '')
+# Пароль sudo/root на ПАК, если он отличается от пароля входа по SSH.
+# Пустой — sudo выполняется паролем входа.
+DEVICE_SSH_SUDO_PASSWORD = os.getenv('DEVICE_SSH_SUDO_PASSWORD', '')
 # Резервные SSH-пароли (через запятую): пробуются по очереди, если у киоска
 # не задан свой пароль и глобальный не подошёл.
 DEVICE_SSH_PASSWORDS = [p for p in os.getenv('DEVICE_SSH_PASSWORDS', '').split(',') if p.strip()]

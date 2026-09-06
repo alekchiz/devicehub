@@ -753,6 +753,26 @@ class SshHelperTests(TestCase):
         self.assertEqual(res.returncode, 0)
         self.assertEqual(m.call_count, 2)  # устройство → глобальный → успех
 
+    @override_settings(DEVICE_SSH_PASSWORD='login-pass',
+                       DEVICE_SSH_SUDO_PASSWORD='sudo-pass')
+    @patch('devices.views.subprocess.run')
+    def test_sudo_uses_separate_sudo_password(self, m):
+        """sudo-команды используют sudo-пароль, а вход — отдельный пароль."""
+        self.device.ssh_password = ''
+        self.device.save()
+
+        def fake(args, capture_output=True, text=True, timeout=10):
+            login_pwd = args[2]           # sshpass -p <пароль входа>
+            remote = args[-1]             # удалённая команда
+            self.assertEqual(login_pwd, 'login-pass')
+            self.assertIn('sudo-pass', remote)  # в sudo передаётся свой пароль
+            return SimpleNamespace(returncode=0, stdout='', stderr='')
+
+        m.side_effect = fake
+        from devices.views import ssh_reboot
+        res = ssh_reboot(self.device)
+        self.assertEqual(res.returncode, 0)
+
     def test_upload_requires_admin(self):
         self.client.force_login(_technician())
         resp = self.client.post(reverse('device_upload', args=[self.device.pk]))
