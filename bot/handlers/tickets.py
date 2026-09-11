@@ -17,5 +17,6 @@ from .tickets_search import search_start, search_result
 from .tickets_edit import (
     edit_ticket_start, edit_ticket_select, edit_field_handler,
     edit_problem_handler, edit_name_handler, edit_phone_handler,
+    edit_back,
 )
 from .tickets_status import status_start, status_result

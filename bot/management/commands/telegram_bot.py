@@ -13,6 +13,7 @@ from bot.handlers.tickets import (
     ticket_detail_handler, search_start, search_result,
     edit_ticket_start, edit_ticket_select, edit_field_handler,
     edit_problem_handler, edit_name_handler, edit_phone_handler,
+    edit_back,
     status_start, status_result,
     TICKET_PAK, TICKET_PROBLEM, TICKET_NAME, TICKET_PHONE, SEARCH_QUERY,
     EDIT_TICKET_SELECT, EDIT_TICKET_FIELD, EDIT_TICKET_PROBLEM, EDIT_TICKET_NAME, EDIT_TICKET_PHONE,
@@ -199,9 +200,18 @@ class Command(BaseCommand):
                 EDIT_TICKET_FIELD: [
                     CallbackQueryHandler(edit_field_handler, pattern='^(field_problem|field_name|field_phone|edit_save|menu)$'),
                 ],
-                EDIT_TICKET_PROBLEM: [MessageHandler(filters.TEXT & ~filters.COMMAND, edit_problem_handler)],
-                EDIT_TICKET_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, edit_name_handler)],
-                EDIT_TICKET_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, edit_phone_handler)],
+                EDIT_TICKET_PROBLEM: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, edit_problem_handler),
+                    CallbackQueryHandler(edit_back, pattern='^edit_back$'),
+                ],
+                EDIT_TICKET_NAME: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, edit_name_handler),
+                    CallbackQueryHandler(edit_back, pattern='^edit_back$'),
+                ],
+                EDIT_TICKET_PHONE: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, edit_phone_handler),
+                    CallbackQueryHandler(edit_back, pattern='^edit_back$'),
+                ],
             },
             fallbacks=[CommandHandler('cancel', cancel)],
         )
