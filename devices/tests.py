@@ -618,6 +618,9 @@ class DashboardNonstandardTests(TestCase):
         self.client.force_login(_technician())
         resp = self.client.get(reverse('dashboard'))
         self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, 'title="Пароль обновлён"')
+        self.client.force_login(_admin())
+        resp = self.client.get(reverse('dashboard'))
         self.assertContains(resp, 'title="Пароль обновлён"')
 
 
@@ -1041,3 +1044,21 @@ class DeviceDetailPageTests(TestCase):
         resp = self.client.get(reverse('device_detail_page', args=[device.pk]))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, device.hostname)
+
+    def test_detail_modal_renders_for_admin_and_tech(self):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+        admin = User.objects.create_user(username='detadm2', password='p')
+        admin.profile.role = 'admin'
+        admin.profile.save()
+        tech = User.objects.create_user(username='dettech', password='p')
+        device = Device.objects.create(
+            hostname='667', vpn_ip='10.0.0.10', anydesk='4444', password_migrated=True)
+        for user, see_vpn in ((admin, True), (tech, False)):
+            self.client.force_login(user)
+            resp = self.client.get(reverse('device_detail_modal', args=[device.pk]))
+            self.assertEqual(resp.status_code, 200)
+            self.assertContains(resp, device.hostname)
+            # VPN и AnyDesk видит только админ.
+            self.assertIs('10.0.0.10' in resp.content.decode(), see_vpn)
+            self.assertIs('4444' in resp.content.decode(), see_vpn)

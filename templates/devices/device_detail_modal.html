@@ -35,15 +35,18 @@
                 <tr>
                     <td class="text-muted">VPN IP</td>
                     <td>
+                        {% if user.profile.role == 'admin' %}
                         <strong>{{ device.vpn_ip|default:"—" }}</strong>
                         {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
                             <br><a href="ssh://terminal@{{ device.vpn_ip }}" class="btn btn-outline-success btn-sm mt-1"><i class="bi bi-terminal"></i> SSH</a>
+                        {% endif %}
+                        {% else %}<span class="text-muted">—</span>
                         {% endif %}
                     </td>
                 </tr>
                 <tr>
                     <td class="text-muted">AnyDesk</td>
-                    <td>{{ device.anydesk|default:"—" }}</td>
+                    <td>{% if user.profile.role == 'admin' %}{{ device.anydesk|default:"—" }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                 </tr>
                 <tr><td class="text-muted">Сеть</td><td>{{ device.network_speed|default:"—" }}</td></tr>
                 <tr><td class="text-muted">x11vnc</td><td>{{ device.x11vnc }}</td></tr>

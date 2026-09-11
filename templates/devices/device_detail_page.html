@@ -18,7 +18,7 @@
                 <span class="status-badge {% if device.in_repair %}danger{% elif device.is_online %}success{% else %}danger{% endif %}">
                     {% if device.in_repair %}Ремонт{% elif device.is_online %}Онлайн{% else %}Оффлайн{% if device.offline_duration %}, {{ device.offline_duration }}{% endif %}{% endif %}
                 </span>
-                {% if device.password_migrated %}<span class="ns-badge" style="background:#1f9d55;color:#fff;" title="SSH-пароль стандартный"><i class="bi bi-key"></i></span>{% endif %}
+                {% if user.profile.role == 'admin' and device.password_migrated %}<span class="ns-badge" style="background:#1f9d55;color:#fff;" title="SSH-пароль стандартный"><i class="bi bi-key"></i></span>{% endif %}
                 {% if device.vnc_ready %}<span class="ns-badge" style="background:#0ea5e9;color:#fff;" title="VNC настроен"><i class="bi bi-eye"></i></span>{% endif %}
                 {% if device.agent_deployed %}<span class="ns-badge" style="background:#d97706;color:#fff;" title="info2mqtt обновлён"><i class="bi bi-send"></i></span>{% endif %}
             </div>
@@ -27,13 +27,15 @@
                 <span>ПО: <b>{{ device.software|default:"—" }}</b></span>
                 <span>Аптайм: <b>{{ device.uptime_formatted|default:device.uptime|default:"—" }}</b></span>
                 <span>SN: <b>{{ device.sn|default:"—" }}</b></span>
-                <span>VPN: <b>{{ device.vpn_ip|default:"—" }}</b></span>
+                {% if user.profile.role == 'admin' %}<span>VPN: <b>{{ device.vpn_ip|default:"—" }}</b></span>{% endif %}
             </div>
         </div>
         <div class="hero-actions">
+            {% if user.profile.role == 'admin' %}
             <a href="ssh://terminal@{{ device.vpn_ip }}" class="hero-btn" title="Открыть SSH"><i class="bi bi-terminal"></i> SSH</a>
             {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
             <a href="vnc://{{ device.vpn_ip }}:5900" class="hero-btn" title="Открыть VNC (порт 5900)"><i class="bi bi-eye"></i> VNC</a>
+            {% endif %}
             {% endif %}
             <a href="{% url 'export_device_report' device.pk %}" class="hero-btn"><i class="bi bi-file-earmark-excel"></i> Сводка</a>
             <a href="{% url 'dashboard' %}" class="hero-btn"><i class="bi bi-arrow-left"></i> Дашборд</a>
@@ -93,6 +95,7 @@
     </div>
 
     <!-- Доступ и подключение -->
+    {% if user.profile.role == 'admin' %}
     <div class="col-md-4">
         <div class="card h-100 info-card">
             <div class="card-header"><i class="bi bi-wifi"></i> Доступ к киоску</div>
@@ -136,6 +139,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Оборудование -->
     <div class="col-md-3">

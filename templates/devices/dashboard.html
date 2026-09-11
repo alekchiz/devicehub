@@ -210,7 +210,7 @@
                     <div class="d-flex align-items-center gap-1" style="min-width:0;">
                         <span class="hostname text-truncate" style="min-width:0;">{{ device.hostname }}</span>
                         {% if not device.is_standard %}<span class="ns-badge"><i class="bi bi-stars"></i> Новый</span>{% endif %}
-                        {% if device.password_migrated %}<span class="ns-badge" style="background:#1f9d55;color:#fff;" title="Пароль обновлён"><i class="bi bi-key"></i></span>{% endif %}
+                        {% if user.profile.role == 'admin' and device.password_migrated %}<span class="ns-badge" style="background:#1f9d55;color:#fff;" title="Пароль обновлён"><i class="bi bi-key"></i></span>{% endif %}
                         {% if device.vnc_ready %}<span class="ns-badge" style="background:#0ea5e9;color:#fff;" title="VNC настроен"><i class="bi bi-eye"></i></span>{% endif %}
                         {% if device.agent_deployed %}<span class="ns-badge" style="background:#d97706;color:#fff;" title="info2mqtt обновлён"><i class="bi bi-send"></i></span>{% endif %}
                     </div>
@@ -220,7 +220,7 @@
                               title="{% if device.in_repair %}Ремонт{% elif device.is_online %}Онлайн{% else %}Оффлайн{% endif %}"></span>
                     </div>
                 </div>
-                {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' or device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
+                {% if user.profile.role == 'admin' and device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' or user.profile.role == 'admin' and device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
                 <div class="dc-links">
                     {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
                     <a href="ssh://terminal@{{ device.vpn_ip }}" class="vpn-link" onclick="event.stopPropagation();" title="Подключиться по SSH">
