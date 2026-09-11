@@ -1086,6 +1086,18 @@ class DeviceDetailPageTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, device.hostname)
 
+    def test_detail_page_renders_for_tech_without_management(self):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+        tech = User.objects.create_user(username='dettech2', password='p')
+        device = Device.objects.create(hostname='668', vpn_ip='10.0.0.11', is_online=True)
+        self.client.force_login(tech)
+        resp = self.client.get(reverse('device_detail_page', args=[device.pk]))
+        self.assertEqual(resp.status_code, 200)
+        body = resp.content.decode()
+        self.assertIn(device.hostname, body)
+        self.assertNotIn('Настроить VNC', body)  # блок управления только админу
+
     def test_detail_modal_renders_for_admin_and_tech(self):
         from django.contrib.auth.models import User
         from django.urls import reverse
