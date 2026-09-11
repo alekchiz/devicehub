@@ -107,10 +107,12 @@ async def button_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await all_tickets_handler(update, context)
     elif data == 'edit_ticket':
         return await edit_ticket_start(update, context)
-    elif data.startswith('edit_'):
-        return await edit_ticket_select(update, context)
+    elif data == 'edit_back':
+        return await edit_back(update, context)
     elif data in ('field_problem', 'field_name', 'field_phone', 'edit_save'):
         return await edit_field_handler(update, context)
+    elif data.startswith('edit_'):
+        return await edit_ticket_select(update, context)
     elif data.startswith('ticket_'):
         return await ticket_detail_handler(update, context)
     elif data in ('search_my', 'search_all'):

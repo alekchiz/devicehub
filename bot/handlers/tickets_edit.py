@@ -101,7 +101,12 @@ async def edit_ticket_select(update: Update, context: ContextTypes.DEFAULT_TYPE)
     query = update.callback_query
     await query.answer()
 
-    ticket_id = int(query.data.split('_')[1])
+    parts = query.data.split('_')
+    if len(parts) < 2 or not parts[1].isdigit():
+        # Стrayный callback (edit_save/edit_back вне диалога) — не падаем.
+        await query.edit_message_text('❌ Заявка не выбрана', reply_markup=menu_keyboard())
+        return ConversationHandler.END
+    ticket_id = int(parts[1])
     ticket = await get_ticket(ticket_id)
 
     telegram_id = update.effective_user.id
