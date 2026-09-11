@@ -921,6 +921,14 @@ class VncSshSetupTests(TestCase):
             self.assertIn('x11vnc -storepasswd', script)
             self.assertIn('/etc/systemd/system/x11vnc.service', script)
             self.assertIn('systemctl daemon-reload', script)
+            # Юнит должен запускать x11vnc от владельца сессии с явным auth.
+            unit_hit = re.search(
+                r"printf '%s' '([A-Za-z0-9+/=]+)' \| base64 -d > /etc/systemd/system/x11vnc.service",
+                script)
+            self.assertTrue(unit_hit, 'base64 юнита не найден в скрипте')
+            unit = base64.b64decode(unit_hit.group(1)).decode('utf-8')
+            self.assertIn('User=terminal', unit)
+            self.assertIn('/run/user/1000/gdm/Xauthority', unit)
             return SimpleNamespace(returncode=0, stdout='', stderr='')
 
         m.side_effect = fake

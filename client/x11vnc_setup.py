@@ -167,13 +167,13 @@ Group={user}
 Environment=DISPLAY={display}
 WorkingDirectory={home}
 ExecStartPre=/bin/sleep 3
-ExecStart=/usr/bin/x11vnc -forever -shared -rfbauth {passfile} -display {display} -rfbport {port} -logfile {logfile} -auth guess -xkb -noxrecord -noxfixes -noxdamage
+ExecStart=/usr/bin/x11vnc -forever -shared -rfbauth {passfile} -display {display} -rfbport {port} -logfile {logfile} -auth /run/user/{uid}/gdm/Xauthority -xkb -noxrecord -noxfixes -noxdamage
 Restart=always
 RestartSec=5
 
 [Install]
 WantedBy=graphical.target
-""".format(user=user_name, display=display, home=home, port=port,
+""".format(user=user_name, display=display, home=home, port=port, uid=uid,
            passfile=passfile, logfile=logfile)
 
     service_path = Path("/etc/systemd/system/x11vnc.service")
