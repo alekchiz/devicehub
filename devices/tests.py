@@ -1,4 +1,6 @@
+import base64
 import json
+import re
 from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -793,7 +795,11 @@ class SshHelperTests(TestCase):
             pwd = args[2]
             remote = args[-1]
             if pwd == 'old-device-pass':
-                self.assertIn('terminal:Pochta@medQaZ', remote)
+                hit = re.search(
+                    r"\$\(printf '%s' '([A-Za-z0-9+/=]+)' \| base64 -d\)", remote)
+                self.assertTrue(hit, 'base64-скрипт не найден в команде')
+                script = base64.b64decode(hit.group(1)).decode('utf-8')
+                self.assertIn('terminal:Pochta@medQaZ', script)
                 return SimpleNamespace(returncode=0, stdout='', stderr='')
             return self._auth_fail(pwd)
 
@@ -834,7 +840,11 @@ class SshHelperTests(TestCase):
             pwd = args[2]
             remote = args[-1]
             if pwd == 'dev-pass':
-                self.assertIn('chpasswd', remote)
+                hit = re.search(
+                    r"\$\(printf '%s' '([A-Za-z0-9+/=]+)' \| base64 -d\)", remote)
+                self.assertTrue(hit, 'base64-скрипт не найден в команде')
+                script = base64.b64decode(hit.group(1)).decode('utf-8')
+                self.assertIn('chpasswd', script)
                 self.assertIn('AAAFakeKey', remote)   # ключ сервера
                 self.assertIn('AAAMacKey', remote)    # личный ключ Мака
                 self.assertIn('authorized_keys', remote)

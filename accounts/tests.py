@@ -2,6 +2,8 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase
 
+from .views import _client_ip
+
 from .models import UserProfile
 
 
@@ -59,3 +61,17 @@ class LoginRateLimitTests(TestCase):
         resp = self.client.post('/admin/login/', {'username': 'bob', 'password': 'wrong'})
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Слишком много неудачных попыток')
+
+    def test_client_ip_trusts_x_real_ip_not_xff(self):
+        class Req:
+            META = {
+                'HTTP_X_FORWARDED_FOR': '1.2.3.4',   # подделка клиентом
+                'HTTP_X_REAL_IP': '5.6.7.8',         # ставит nginx $remote_addr
+                'REMOTE_ADDR': '127.0.0.1',
+            }
+        self.assertEqual(_client_ip(Req()), '5.6.7.8')
+
+    def test_client_ip_falls_back_to_remote_addr(self):
+        class Req:
+            META = {'REMOTE_ADDR': '192.168.1.10'}
+        self.assertEqual(_client_ip(Req()), '192.168.1.10')

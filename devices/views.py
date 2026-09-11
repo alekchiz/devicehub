@@ -234,14 +234,17 @@ def ssh_change_password(device, new_password):
     if not new_password:
         return False, 'Не указан новый пароль'
 
-    escaped_user = settings.DEVICE_SSH_USER.replace("'", "'\\''")
-    escaped_new = new_password.replace("'", "'\\''")
-
     def change_cmd(sudo_pwd):
+        import base64
         escaped_sudo = sudo_pwd.replace("'", "'\\''")
+        # Пароль и имя пользователя передаём base64-скриптом, чтобы избежать
+        # shell-инъекций через символы $, `, " в пароле (см. _ssh_vnc_setup).
+        line = "{}:{}".format(settings.DEVICE_SSH_USER, new_password).replace("'", "'\\''")
+        script = "printf '%s\\n' '__LINE__' | chpasswd".replace('__LINE__', line)
+        script_b64 = base64.b64encode(script.encode('utf-8')).decode('ascii')
         base = ("printf '%s\\n' '{sudo}' | LC_ALL=C sudo -S sh -c "
-                "\"printf '%s\\n' '{user}:{new}' | chpasswd\"").format(
-                    sudo=escaped_sudo, user=escaped_user, new=escaped_new)
+                "\"$(printf '%s' '{script}' | base64 -d)\"").format(
+                    sudo=escaped_sudo, script=script_b64)
         keys_cmd = _authorized_keys_cmd()
         return base + (f" && {keys_cmd}" if keys_cmd else "")
 
@@ -653,10 +656,12 @@ def device_status_feed(request):
 
     return JsonResponse(payload)
 
+@login_required
 def device_detail_modal(request, pk):
     device = get_object_or_404(Device, pk=pk)
     return render(request, 'devices/device_detail_modal.html', {'device': device})
 
+@login_required
 def device_detail_page(request, pk):
     device = get_object_or_404(Device, pk=pk)
     repairs = Repair.objects.filter(device=device).order_by('-created_at')[:10]
@@ -1136,9 +1141,11 @@ def export_tonometer_report(request):
     autosize_columns(ws)
     return xlsx_response(wb, 'tonometer_report.xlsx')
 
+@login_required
 def repairs_list(request):
     return redirect('/admin/devices/repair/')
 
+@user_passes_test(is_admin)
 def repair_create(request):
     if request.method == 'POST':
         device_id = request.POST.get('device_id')
@@ -1149,6 +1156,7 @@ def repair_create(request):
             messages.success(request, f'Заявка на ремонт {device.hostname} создана')
     return redirect('repairs_list')
 
+@user_passes_test(is_admin)
 def repair_start(request, pk):
     if request.method == 'POST':
         repair = get_object_or_404(Repair, pk=pk)
@@ -1157,6 +1165,7 @@ def repair_start(request, pk):
         messages.success(request, f'Ремонт {repair.device.hostname} начат')
     return redirect('repairs_list')
 
+@user_passes_test(is_admin)
 def repair_ready(request, pk):
     repair = get_object_or_404(Repair, pk=pk)
     if request.method == 'POST':

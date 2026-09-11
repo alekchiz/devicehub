@@ -10,9 +10,11 @@ LOGIN_WINDOW_SECONDS = 300
 
 
 def _client_ip(request: HttpRequest) -> str:
-    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
+    # nginx перезаписывает X-Real-IP реальным клиентом ($remote_addr),
+    # поэтому это надёжный источник. X-Forwarded-For клиент подделывает.
+    real = request.META.get('HTTP_X_REAL_IP', '')
+    if real:
+        return real.strip()
     return request.META.get('REMOTE_ADDR', 'unknown')
 
 
