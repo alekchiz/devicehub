@@ -65,25 +65,25 @@
                 <div class="resources">
                     {% if device.cpu_load is not None %}
                     <div class="resource">
-                        <div class="d-flex justify-content-between small"><span>💻 CPU</span><span><b>{{ device.cpu_load|floatformat:"0" }}%</b></span></div>
+                        <div class="d-flex justify-content-between small"><span>💻 CPU</span><span class="r-right"><b>{{ device.cpu_load|floatformat:"0" }}%</b></span></div>
                         <div class="metric-track"><div class="metric-fill {% if device.cpu_load < 40 %}is-good{% elif device.cpu_load < 70 %}is-warn{% else %}is-bad{% endif %}" style="width:{% widthratio device.cpu_load 100 100 %}%;"></div></div>
                     </div>
                     {% endif %}
                     {% if device.memory_percent is not None %}
                     <div class="resource">
-                        <div class="d-flex justify-content-between small"><span>🧠 RAM</span><span><b>{{ device.memory_percent|floatformat:"0" }}%</b></span></div>
+                        <div class="d-flex justify-content-between small"><span>🧠 RAM</span><span class="r-right"><b>{{ device.memory_percent|floatformat:"0" }}%</b></span></div>
                         <div class="metric-track"><div class="metric-fill {% if device.memory_percent < 70 %}is-good{% elif device.memory_percent < 85 %}is-warn{% else %}is-bad{% endif %}" style="width:{% widthratio device.memory_percent 100 100 %}%;"></div></div>
                     </div>
                     {% endif %}
                     {% if device.hdd_percent is not None %}
                     <div class="resource">
-                        <div class="d-flex justify-content-between small"><span>💾 Диск</span><span><b>{{ device.hdd_percent|floatformat:"0" }}%</b> <small class="text-muted">({{ device.hdd|floatformat:1 }}/{{ device.hdd_total|floatformat:1 }} ГБ)</small></span></div>
+                        <div class="d-flex justify-content-between small"><span>💾 Диск</span><span class="r-right"><b>{{ device.hdd_percent|floatformat:"0" }}%</b> <small class="text-muted ms-1">({{ device.hdd|floatformat:1 }}/{{ device.hdd_total|floatformat:1 }} ГБ)</small></span></div>
                         <div class="metric-track"><div class="metric-fill {% if device.hdd_percent < 70 %}is-good{% elif device.hdd_percent < 85 %}is-warn{% else %}is-bad{% endif %}" style="width:{% widthratio device.hdd_percent 100 100 %}%;"></div></div>
                     </div>
                     {% endif %}
                     {% if device.cpu_temperature or device.temperature %}
                     <div class="resource">
-                        <div class="d-flex justify-content-between small"><span>🌡 Темп. CPU</span><span><b>{% if device.cpu_temperature %}{{ device.cpu_temperature }}{% else %}{{ device.temperature }}{% endif %}</b></span></div>
+                        <div class="d-flex justify-content-between small"><span>🌡 Темп. CPU</span><span class="r-right"><b>{% if device.cpu_temperature %}{{ device.cpu_temperature }}{% else %}{{ device.temperature }}{% endif %}</b></span></div>
                     </div>
                     {% endif %}
                 </div>
