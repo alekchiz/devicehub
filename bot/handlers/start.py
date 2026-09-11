@@ -59,12 +59,8 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.callback_query:
         await update.callback_query.answer()
-        await update.callback_query.edit_message_text(header, parse_mode='HTML')
-        try:
-            await update.effective_message.reply_text(
-                'Выберите действие ниже', reply_markup=main_keyboard())
-        except Exception:
-            pass
+        await update.callback_query.edit_message_text(
+            header, parse_mode='HTML', reply_markup=main_keyboard())
     else:
         await update.message.reply_text(header, parse_mode='HTML', reply_markup=main_keyboard())
 async def health_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

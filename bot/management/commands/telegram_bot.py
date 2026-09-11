@@ -6,7 +6,9 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.handlers.start import start, menu_command
 from bot.handlers.stats import stats_handler
 from bot.formatting import panel, main_keyboard
-from bot.handlers.register import register_start, register_phone, register_password, link_account, link_confirm, cancel, PHONE_WAIT, PASSWORD_WAIT
+from bot.handlers.register import (register_start, register_phone, register_password,
+                                   link_account, link_confirm, cancel,
+                                   PHONE_WAIT, PASSWORD_WAIT, LINK_PASSWORD_WAIT)
 from bot.handlers.tickets import (
     ticket_create_start, ticket_pak_handler, ticket_problem_handler,
     ticket_name_handler, ticket_phone_handler, my_tickets_handler, all_tickets_handler,

@@ -1,11 +1,13 @@
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 from asgiref.sync import sync_to_async
+from django.db import IntegrityError
 from bot.services import create_user_sync, authenticate_user_sync, link_telegram_sync, is_phone_allowed
 import re
 
 PHONE_WAIT = 1
 PASSWORD_WAIT = 2
+LINK_PASSWORD_WAIT = 20
 
 @sync_to_async
 def create_user(username, password, telegram_id, phone):
@@ -22,6 +24,16 @@ def link_telegram(user, telegram_id):
 @sync_to_async
 def check_phone(phone):
     return is_phone_allowed(phone)
+
+@sync_to_async
+def telegram_registered(telegram_id):
+    from accounts.models import UserProfile
+    return UserProfile.objects.filter(telegram_id=telegram_id).exists()
+
+@sync_to_async
+def phone_registered(phone):
+    from accounts.models import UserProfile
+    return UserProfile.objects.filter(phone=phone).exists()
 
 async def register_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -58,8 +70,18 @@ async def register_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     phone = context.user_data['phone']
     telegram_id = update.effective_user.id
+
+    if await telegram_registered(telegram_id):
+        await update.message.reply_text(
+            '❌ Этот Telegram уже зарегистрирован. Используйте /menu.')
+        return ConversationHandler.END
+    if await phone_registered(phone):
+        await update.message.reply_text(
+            '❌ На этот номер уже создан аккаунт.')
+        return ConversationHandler.END
+
     username = str(telegram_id)
-    
+
     try:
         await create_user(username, password, telegram_id, phone)
         await update.message.reply_text(
@@ -68,9 +90,13 @@ async def register_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Роль: Техник\n\n"
             f"Используйте /menu"
         )
-    except Exception as e:
-        await update.message.reply_text(f"❌ Ошибка регистрации: {e}")
-    
+    except IntegrityError:
+        await update.message.reply_text(
+            '❌ Ошибка регистрации: учётная запись уже существует.')
+    except Exception:
+        await update.message.reply_text(
+            '❌ Не удалось зарегистрироваться. Попробуйте позже или обратитесь к администратору.')
+
     return ConversationHandler.END
 
 async def link_account(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -79,24 +105,24 @@ async def link_account(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Введите ваш логин и пароль через пробел:\n"
         "Или /cancel для отмены"
     )
-    return PASSWORD_WAIT
+    return LINK_PASSWORD_WAIT
 
 async def link_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         parts = update.message.text.strip().split()
         if len(parts) != 2:
             await update.message.reply_text("❌ Введите логин и пароль через пробел")
-            return PASSWORD_WAIT
-        
+            return LINK_PASSWORD_WAIT
+
         username, password = parts
         user = await authenticate_user(username, password)
-        
+
         if user:
             await link_telegram(user, update.effective_user.id)
             await update.message.reply_text(f"✅ Аккаунт {username} привязан! Используйте /menu")
         else:
             await update.message.reply_text("❌ Неверный логин или пароль")
-            return PASSWORD_WAIT
+            return LINK_PASSWORD_WAIT
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {e}")
     
