@@ -259,8 +259,9 @@ def _ssh_vnc_setup(device, vnc_password):
 
     Автовыбор сервиса по тому, что установлено на киоске: сначала пробуем
     x0vncserver.service (новый ПАК), иначе x11vnc.service (старые ПАК после
-    client/x11vnc_setup.py). Файл пароля генерируется vncpasswd (RFB-формат),
-    совместим с -rfbauth у x11vnc и с passwd у x0vncserver.
+    client/x11vnc_setup.py). Файл пароля генерируется в RFB-формате (совместим
+    с -rfbauth у x11vnc и с passwd у x0vncserver): через vncpasswd -f, а если
+    vncpasswd нет — через x11vnc -storepasswd.
     """
     if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
         return _SSHFailed('SSH: у киоска нет VPN IP')
@@ -270,8 +271,12 @@ def _ssh_vnc_setup(device, vnc_password):
         ev = vnc_password.replace("'", "'\\''")
         return ("mkdir -p /home/terminal/.vnc && "
                 "printf '%s\\n' '{sudo}' | LC_ALL=C sudo -S sh -c "
-                "\"printf '%s\\n' '{vnc}' | vncpasswd -f > /home/terminal/.vnc/passwd.new "
-                "&& chown terminal:terminal /home/terminal/.vnc/passwd.new "
+                "\"{{ if command -v vncpasswd >/dev/null 2>&1; then "
+                "printf '%s\\n' '{vnc}' | vncpasswd -f > /home/terminal/.vnc/passwd.new; "
+                "elif command -v x11vnc >/dev/null 2>&1; then "
+                "x11vnc -storepasswd '{vnc}' /home/terminal/.vnc/passwd.new >/dev/null 2>&1; "
+                "else echo 'Нет vncpasswd и x11vnc для создания пароля VNC' >&2; exit 1; fi; }} && "
+                "chown terminal:terminal /home/terminal/.vnc/passwd.new "
                 "&& chmod 600 /home/terminal/.vnc/passwd.new "
                 "&& mv -f /home/terminal/.vnc/passwd.new /home/terminal/.vnc/passwd "
                 "&& {{ if systemctl list-unit-files x0vncserver.service >/dev/null 2>&1; "

@@ -911,6 +911,8 @@ class VncSshSetupTests(TestCase):
             self.assertIn('x0vncserver.service', remote)
             self.assertIn('x11vnc.service', remote)
             self.assertIn('systemctl list-unit-files', remote)
+            self.assertIn('vncpasswd -f', remote)
+            self.assertIn("x11vnc -storepasswd", remote)
             return SimpleNamespace(returncode=0, stdout='', stderr='')
 
         m.side_effect = fake
