@@ -5,6 +5,7 @@ from telegram.ext import ContextTypes
 
 from bot.formatting import panel, menu_keyboard
 from bot.services import get_fleet_stats_sync
+from .tickets_common import require_privileged
 
 
 @sync_to_async
@@ -16,6 +17,17 @@ async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from bot.management.commands.health_check import get_server_stats
 
     query = update.callback_query
+    tid = update.effective_user.id
+    _, denied = await require_privileged(tid)
+    if denied:
+        text = panel('Доступ запрещён', denied)
+        if query:
+            await query.answer()
+            await query.edit_message_text(text, parse_mode='HTML')
+        else:
+            await update.message.reply_text(text, parse_mode='HTML')
+        return
+
     if query:
         await query.answer()
 

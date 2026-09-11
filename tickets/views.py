@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from .models import Ticket, TicketComment, ActivityLog
+from .models import Ticket, TicketComment
 from devices.models import Device
 from django.contrib.auth.models import User
 from core.excel_utils import new_workbook, xlsx_response, style_header_row, autosize_columns
@@ -54,21 +54,17 @@ def ticket_create(request):
                 contact_phone=contact_phone,
                 created_by=request.user
             )
-            # Лог
-            ActivityLog.objects.create(
-                user=request.user,
-                action='create',
-                model_name='Ticket',
-                object_id=ticket.id,
-                description=f'Создана заявка #{ticket.id} на Киоск {device.hostname}'
-            )
             messages.success(request, f'Заявка #{ticket.id} создана')
     return redirect('tickets_list')
 
 @login_required
 def ticket_edit(request, pk):
     ticket = get_object_or_404(Ticket, pk=pk)
-    
+
+    if request.user.profile.role == 'observer':
+        messages.error(request, 'Наблюдатель не может редактировать заявки')
+        return redirect('tickets_list')
+
     if request.user.profile.role == 'technician' and ticket.created_by != request.user:
         messages.error(request, 'Вы можете редактировать только свои заявки')
         return redirect('tickets_list')
@@ -83,14 +79,6 @@ def ticket_edit(request, pk):
             ticket.contact_name = contact_name
             ticket.contact_phone = contact_phone
             ticket.save()
-            # Лог
-            ActivityLog.objects.create(
-                user=request.user,
-                action='update',
-                model_name='Ticket',
-                object_id=ticket.id,
-                description=f'Изменена заявка #{ticket.id}'
-            )
             messages.success(request, f'Заявка #{ticket.id} обновлена')
             return redirect('tickets_list')
     
@@ -103,6 +91,9 @@ def ticket_edit(request, pk):
 
 @login_required
 def ticket_assign(request, pk):
+    if request.user.profile.role != 'admin':
+        messages.error(request, 'Только администратор может назначать заявки')
+        return redirect('tickets_list')
     if request.method == 'POST':
         ticket = get_object_or_404(Ticket, pk=pk)
         user_id = request.POST.get('user_id')
@@ -111,33 +102,24 @@ def ticket_assign(request, pk):
             ticket.assigned_to = user
             ticket.status = 'in_progress'
             ticket.save()
-            # Лог
-            ActivityLog.objects.create(
-                user=request.user,
-                action='assign',
-                model_name='Ticket',
-                object_id=ticket.id,
-                description=f'Заявка #{ticket.id} назначена на {user.username}'
-            )
             messages.success(request, f'Заявка #{ticket.id} назначена на {user.username}')
     return redirect('tickets_list')
 
 @login_required
 def ticket_change_status(request, pk):
+    role = request.user.profile.role
+    if role == 'observer':
+        messages.error(request, 'Наблюдатель не может менять статус')
+        return redirect('tickets_list')
     if request.method == 'POST':
         ticket = get_object_or_404(Ticket, pk=pk)
+        if role == 'technician' and request.user != ticket.created_by and request.user != ticket.assigned_to:
+            messages.error(request, 'Вы можете менять статус только своих заявок')
+            return redirect('tickets_list')
         new_status = request.POST.get('status')
         if new_status in dict(Ticket.STATUS_CHOICES):
             ticket.status = new_status
             ticket.save()
-            # Лог
-            ActivityLog.objects.create(
-                user=request.user,
-                action='status_change',
-                model_name='Ticket',
-                object_id=ticket.id,
-                description=f'Заявка #{ticket.id} → "{ticket.get_status_display()}"'
-            )
             messages.success(request, f'Статус заявки #{ticket.id} изменён на "{ticket.get_status_display()}"')
     return redirect('tickets_list')
 

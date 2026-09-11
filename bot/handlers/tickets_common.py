@@ -70,6 +70,21 @@ def menu_keyboard():
 def get_profile(telegram_id):
     return get_profile_sync(telegram_id)
 
+
+@sync_to_async
+def require_privileged(telegram_id):
+    """Возвращает профиль, только если аккаунт привязан и роль техника/админа.
+    Иначе — (None, сообщение_об_отказе). Закрывает чувствительные команды
+    (/status, /stats, /health), отдающие VPN/AnyDesk/статистику сервера.
+    """
+    profile = get_profile_sync(telegram_id)
+    if not profile:
+        return None, 'Для доступа зарегистрируйтесь: /register или привяжите аккаунт: /link'
+    if profile['role_code'] not in ('technician', 'admin'):
+        return None, 'Недостаточно прав для этой команды'
+    return profile, None
+
+
 @sync_to_async
 def find_device(hostname):
     return get_device_by_hostname(hostname)

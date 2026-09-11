@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes
 from asgiref.sync import sync_to_async
 from bot.services import get_profile_sync, get_menu_stats_sync
 from bot.formatting import panel, main_keyboard
+from .tickets_common import require_privileged
 
 @sync_to_async
 def get_profile(telegram_id):
@@ -68,6 +69,10 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(header, parse_mode='HTML', reply_markup=main_keyboard())
 async def health_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /health - статистика сервера"""
+    _, denied = await require_privileged(update.effective_user.id)
+    if denied:
+        await update.message.reply_text(panel('Доступ запрещён', denied))
+        return
     from bot.management.commands.health_check import get_server_stats
     import urllib.request
     

@@ -2,12 +2,18 @@
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-from .tickets_common import STATUS_HOSTNAME, menu_keyboard, get_device_full
+from .tickets_common import (
+    STATUS_HOSTNAME, menu_keyboard, get_device_full, require_privileged,
+)
 from bot.formatting import panel, device_status
 
 
 async def status_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /status - запрос номера киоска."""
+    _, denied = await require_privileged(update.effective_user.id)
+    if denied:
+        await update.message.reply_text(panel('Доступ запрещён', denied))
+        return ConversationHandler.END
     await update.message.reply_text(
         panel(
             'Проверка статуса',

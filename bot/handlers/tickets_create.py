@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from .tickets_common import (
     TICKET_PAK, TICKET_PROBLEM, TICKET_NAME, TICKET_PHONE,
-    format_ticket_message, menu_keyboard, get_profile, find_device, create_ticket, get_admins,
+    format_ticket_message, menu_keyboard, get_profile, find_device, create_ticket,
 )
 from bot.formatting import panel, main_keyboard
 
@@ -65,18 +65,8 @@ async def ticket_phone_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
         message = "✅ <b>Заявка создана!</b>\n\n" + format_ticket_message(ticket)
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=menu_keyboard())
-
-        admins = await get_admins()
-        for admin in admins:
-            if admin.telegram_id:
-                try:
-                    await context.bot.send_message(
-                        admin.telegram_id,
-                        "🔔 <b>Новая заявка!</b>\n\n" + format_ticket_message(ticket),
-                        parse_mode='HTML'
-                    )
-                except Exception:
-                    pass
+        # Уведомления админам о новой заявке шлёт post_save-сигнал
+        # (tickets/signals.ticket_notifications).
 
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {e}")
