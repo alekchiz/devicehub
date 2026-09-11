@@ -56,7 +56,8 @@ class Command(BaseCommand):
             if save and device.ssh_password != working:
                 Device.objects.filter(pk=device.pk).update(ssh_password=working)
                 saved = '  [сохранён в киоске]'
-            self.stdout.write(f'  {device.hostname:>10}  {device.vpn_ip:<16}  {working}{saved}')
+            # Пароль не выводим в консоль/логи — только факт учпеха.
+            self.stdout.write(f'  {device.hostname:>10}  {device.vpn_ip:<16}  ✓ подключился{saved}')
 
         self.stdout.write(self.style.SUCCESS(
             f'Готово: с рабочим паролем — {found}, без ответа — {failed}'
