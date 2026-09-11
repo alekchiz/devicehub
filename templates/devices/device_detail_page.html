@@ -208,8 +208,16 @@
     <div class="card-header"><i class="bi bi-gear"></i> Управление</div>
     <div class="card-body">
         <div class="d-flex flex-wrap gap-2 mb-3">
-            <a href="{% url 'device_vnc_setup' device.pk %}" class="btn btn-soft btn-outline-info btn-sm" onclick="return confirm('Настроить VNC? (перезапуск)');"><i class="bi bi-gear"></i> Настроить VNC</a>
-            <a href="{% url 'device_deploy_agent' device.pk %}" class="btn btn-soft btn-outline-secondary btn-sm" onclick="return confirm('Закинуть обновлённый info2mqtt.py?');"><i class="bi bi-send"></i> Обновить info2mqtt</a>
+            <form method="post" action="{% url 'device_vnc_setup' device.pk %}" class="d-inline"
+                  onsubmit="return confirm('Настроить VNC на киоске? (будет перезапуск)');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-soft btn-outline-info btn-sm"><i class="bi bi-gear"></i> Настроить VNC</button>
+            </form>
+            <form method="post" action="{% url 'device_deploy_agent' device.pk %}" class="d-inline"
+                  onsubmit="return confirm('Закинуть обновлённый info2mqtt.py на киоск?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-soft btn-outline-secondary btn-sm"><i class="bi bi-send"></i> Обновить info2mqtt</button>
+            </form>
             <a href="{% url 'device_reboot' device.pk %}" class="btn btn-soft btn-outline-danger btn-sm" onclick="return confirm('Перезагрузить киоск?');"><i class="bi bi-power"></i> Reboot</a>
             <a href="{% url 'device_stop' device.pk %}" class="btn btn-soft btn-outline-warning btn-sm" onclick="return confirm('Остановить сервис?');"><i class="bi bi-stop-circle"></i> Стоп</a>
             <a href="{% url 'device_start' device.pk %}" class="btn btn-soft btn-outline-primary btn-sm" onclick="return confirm('Запустить сервис?');"><i class="bi bi-play-circle"></i> Старт</a>
