@@ -274,6 +274,77 @@ def _ssh_vnc_setup(device, vnc_password):
                     sudo_passwords=_ssh_sudo_passwords(device),
                     sudo_cmd=vnc_cmd)
 
+
+def _read_device_conf(device):
+    """Читает /home/terminal/rtk/device.conf через SSH (или None)."""
+    if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
+        return None
+    result = ssh_execute(device, 'cat /home/terminal/rtk/device.conf')
+    if result.returncode != 0:
+        return None
+    return result.stdout
+
+
+def _write_device_conf(device, content):
+    """Записывает device.conf на киоск (base64, чтобы не ломать кавычки)."""
+    import base64
+    b64 = base64.b64encode(content.encode('utf-8')).decode('ascii')
+    cmd = ("printf '%s' '{b64}' | base64 -d > /home/terminal/rtk/device.conf.tmp "
+           "&& mv /home/terminal/rtk/device.conf.tmp /home/terminal/rtk/device.conf").format(b64=b64)
+    result = ssh_execute(device, cmd)
+    return result.returncode == 0
+
+
+def _toggle_module_in_conf(content, key, action):
+    """Возвращает (новый_контент, changed). ВКЛ=комментарий #, ВЫКЛ=активна false."""
+    lines = content.split('\n')
+    out = []
+    changed = False
+    found = False
+
+    for raw in lines:
+        stripped = raw.strip()
+        body = stripped
+        while body.startswith('#'):
+            body = body[1:].lstrip()
+
+        if body == key or body.startswith(key + ' '):
+            found = True
+            if action == 'enable':
+                if not stripped.startswith('#'):
+                    out.append('#' + (stripped if stripped else body))
+                    changed = True
+                else:
+                    out.append(raw)
+            else:  # disable
+                if stripped.startswith('#'):
+                    out.append('{} = false'.format(key))
+                    changed = True
+                elif body != '{} = false'.format(key):
+                    out.append('{} = false'.format(key))
+                    changed = True
+                else:
+                    out.append(raw)
+        else:
+            out.append(raw)
+
+    if not found and action == 'disable':
+        out.append('{} = false'.format(key))
+        changed = True
+    return '\n'.join(out), changed
+
+
+def _module_enabled(content, key):
+    """True, если модуль включён (строка закомментирована/отсутствует)."""
+    for raw in content.split('\n'):
+        stripped = raw.strip()
+        body = stripped
+        while body.startswith('#'):
+            body = body[1:].lstrip()
+        if body == key or body.startswith(key + ' '):
+            return stripped.startswith('#')
+    return True
+
 @login_required
 def dashboard(request):
     query = request.GET.get('q', '')
@@ -542,7 +613,17 @@ def device_detail_page(request, pk):
     verifications = device.verifications.all()[:10]
     daily_exams = device.daily_exams.all()[:10]
     daily_total = device.daily_exams.aggregate(total=Sum('exams'))['total']
-    
+
+    # Состояние модулей (алко/тонометр) — «вживую» из device.conf, только для админа на онлайн-киоске.
+    module_states = None
+    if is_admin(request.user) and device.is_online and device.vpn_ip and device.vpn_ip not in ('0', 'N/A'):
+        conf = _read_device_conf(device)
+        if conf is not None:
+            module_states = {
+                mod: _module_enabled(conf, key)
+                for mod, key in getattr(settings, 'DEVICE_MODULE_TOGGLE_KEYS', {}).items()
+            }
+
     context = {
         'device': device,
         'repairs': repairs,
@@ -552,6 +633,7 @@ def device_detail_page(request, pk):
         'verifications': verifications,
         'daily_exams': daily_exams,
         'daily_total': daily_total,
+        'module_states': module_states,
     }
     return render(request, 'devices/device_detail_page.html', context)
 
@@ -702,6 +784,39 @@ def device_deploy_agent(request, pk):
             messages.success(request, f'{device.hostname}: info2mqtt.py загружен и обновлён')
         else:
             messages.warning(request, f'{device.hostname}: {msg}')
+    return redirect('device_detail_page', pk=pk)
+
+
+@user_passes_test(is_admin)
+def device_toggle_module(request, pk, module, action):
+    """Включает/выключает модуль (алко/тонометр) правкой device.conf + перезагрузка."""
+    device = get_object_or_404(Device, pk=pk)
+    if request.method != 'POST':
+        return redirect('device_detail_page', pk=pk)
+
+    keys = getattr(settings, 'DEVICE_MODULE_TOGGLE_KEYS', {})
+    key = keys.get(module)
+    if not key or action not in ('enable', 'disable'):
+        messages.error(request, 'Недопустимый модуль или действие')
+        return redirect('device_detail_page', pk=pk)
+
+    conf = _read_device_conf(device)
+    if conf is None:
+        messages.warning(request, f'{device.hostname}: не удалось прочитать device.conf')
+        return redirect('device_detail_page', pk=pk)
+
+    new_conf, changed = _toggle_module_in_conf(conf, key, action)
+    label = 'алкотестер' if module == 'alco' else 'тонометр'
+    verb = 'включён' if action == 'enable' else 'выключен'
+    if not changed:
+        messages.success(request, f'{device.hostname}: {label} уже {verb}')
+        return redirect('device_detail_page', pk=pk)
+
+    if _write_device_conf(device, new_conf):
+        ssh_reboot(device)
+        messages.success(request, f'{device.hostname}: {label} {verb}, киоск перезапускается')
+    else:
+        messages.warning(request, f'{device.hostname}: не удалось записать device.conf')
     return redirect('device_detail_page', pk=pk)
 
 

@@ -116,6 +116,12 @@ DEVICE_SSH_SUDO_PASSWORD = os.getenv('DEVICE_SSH_SUDO_PASSWORD', '')
 DEVICE_SSH_PUBLIC_KEYS = [
     k.strip() for k in os.getenv('DEVICE_SSH_PUBLIC_KEYS', '').split(',') if k.strip()
 ]
+# Ключи device.conf для включения/выключения модулей ПАК.
+# ВКЛ = строка закомментирована (#), ВЫКЛ = активна со значением false.
+DEVICE_MODULE_TOGGLE_KEYS = {
+    'alco': 'dingo.params.enabled',
+    'tonometer': 'andble.params.enabled',
+}
 # Резервные SSH-пароли (через запятую): пробуются по очереди, если у киоска
 # не задан свой пароль и глобальный не подошёл.
 DEVICE_SSH_PASSWORDS = [p for p in os.getenv('DEVICE_SSH_PASSWORDS', '').split(',') if p.strip()]

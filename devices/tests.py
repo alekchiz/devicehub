@@ -939,3 +939,42 @@ class DeployAgentViewTests(TestCase):
         self.assertRedirects(resp, reverse('device_detail_page', args=[device.pk]))
         device.refresh_from_db()
         self.assertTrue(device.agent_deployed)
+
+
+class ToggleModuleTests(TestCase):
+    def test_toggle_module_conf(self):
+        from devices.views import _module_enabled, _toggle_module_in_conf
+        conf = "#andble.params.enabled = false\ndingo.params.enabled = false\nkeep = x\n"
+
+        out, changed = _toggle_module_in_conf(conf, "andble.params.enabled", "disable")
+        self.assertTrue(changed)
+        self.assertIn("andble.params.enabled = false", out)
+        self.assertNotIn("#andble.params.enabled", out)
+        self.assertFalse(_module_enabled(out, "andble.params.enabled"))
+
+        out2, changed2 = _toggle_module_in_conf(out, "andble.params.enabled", "enable")
+        self.assertTrue(changed2)
+        self.assertTrue(_module_enabled(out2, "andble.params.enabled"))
+
+        # остальные строки не тронуты
+        self.assertIn("dingo.params.enabled = false", out2)
+        self.assertIn("keep = x", out2)
+
+    @patch('devices.views._read_device_conf',
+           return_value="#andble.params.enabled = false\ndingo.params.enabled = false\n")
+    @patch('devices.views._write_device_conf', return_value=True)
+    @patch('devices.views.ssh_reboot')
+    def test_disable_tonometer_view(self, mr, mw, mr_conf):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+        admin = User.objects.create_user(username='modadmin', password='p')
+        admin.profile.role = 'admin'
+        admin.profile.save()
+        device = Device.objects.create(hostname='558', vpn_ip='10.0.0.8', is_online=True)
+        self.client.force_login(admin)
+
+        resp = self.client.post(
+            reverse('device_toggle_module', args=[device.pk, 'tonometer', 'disable']))
+        self.assertRedirects(resp, reverse('device_detail_page', args=[device.pk]))
+        mw.assert_called_once()
+        mr.assert_called_once()
