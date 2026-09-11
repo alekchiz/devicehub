@@ -70,7 +70,7 @@ def import_view(request):
             if not row:
                 continue
             sn = _cell_text(row[0])
-            location_name = row[1].strip() if len(row) > 1 and row[1] is not None else ''
+            location_name = _cell_text(row[1]).strip() if len(row) > 1 else ''
             exam_cell = row[2] if len(row) > 2 else None
             if not sn or sn.lower() in header_tokens:
                 continue
