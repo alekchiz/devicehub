@@ -11,6 +11,9 @@ from .models import Trip
 class TripViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='tech', password='p')
+        self.admin = User.objects.create_user(username='adm', password='p')
+        self.admin.profile.role = 'admin'
+        self.admin.profile.save()
         self.device = Device.objects.create(hostname='123')
 
     def test_list_requires_login(self):
@@ -20,7 +23,7 @@ class TripViewTests(TestCase):
         self.assertEqual(self.client.post(reverse('trip_create'), {}).status_code, 302)
 
     def test_create_trip(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.admin)
         self.client.post(reverse('trip_create'), {
             'date': '2026-09-06',
             'description': 'Замена термобумаги',
@@ -32,13 +35,13 @@ class TripViewTests(TestCase):
 
     def test_delete_trip(self):
         trip = Trip.objects.create(date='2026-09-06', description='x')
-        self.client.force_login(self.user)
+        self.client.force_login(self.admin)
         resp = self.client.post(reverse('trip_delete', args=[trip.pk]))
         self.assertRedirects(resp, reverse('trips_list'), fetch_redirect_response=False)
         self.assertFalse(Trip.objects.filter(pk=trip.pk).exists())
 
     def test_delete_missing_trip_returns_404(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.admin)
         resp = self.client.post(reverse('trip_delete', args=[99999]))
         self.assertEqual(resp.status_code, 404)
 

@@ -11,6 +11,9 @@ from .models import Shipment, ShipmentItem
 class ShipmentViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='tech', password='p')
+        self.admin = User.objects.create_user(username='adm', password='p')
+        self.admin.profile.role = 'admin'
+        self.admin.profile.save()
         self.device = Device.objects.create(hostname='123')
 
     def test_list_requires_login(self):
@@ -20,7 +23,7 @@ class ShipmentViewTests(TestCase):
         self.assertEqual(self.client.post(reverse('shipment_create'), {}).status_code, 302)
 
     def test_create_shipment_with_items(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.admin)
         self.client.post(reverse('shipment_create'), {
             'receiver_name': 'Иван',
             'receiver_contact': '+70000000000',
@@ -42,7 +45,7 @@ class ShipmentViewTests(TestCase):
             receiver_contact='+7',
             transport_company='Почта',
         )
-        self.client.force_login(self.user)
+        self.client.force_login(self.admin)
         self.client.post(reverse('shipment_change_status', args=[shipment.pk]), {
             'status': 'sent',
             'sent_date': '2026-09-01',

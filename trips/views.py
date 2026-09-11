@@ -5,12 +5,20 @@ from .models import Trip
 from devices.models import Device
 from core.excel_utils import new_workbook, xlsx_response, style_header_row, autosize_columns
 
+
+def _is_admin(user):
+    return getattr(getattr(user, 'profile', None), 'role', '') == 'admin'
+
+
 @login_required
 def trips_list(request):
     return redirect('/admin/trips/trip/')
 
 @login_required
 def trip_create(request):
+    if not _is_admin(request.user):
+        messages.error(request, 'Только администратор может создавать поездки')
+        return redirect('trips_list')
     if request.method == 'POST':
         date = request.POST.get('date')
         description = request.POST.get('description')
@@ -29,6 +37,9 @@ def trip_create(request):
 
 @login_required
 def trip_delete(request, pk):
+    if not _is_admin(request.user):
+        messages.error(request, 'Только администратор может удалять поездки')
+        return redirect('trips_list')
     if request.method == 'POST':
         trip = get_object_or_404(Trip, pk=pk)
         trip.delete()

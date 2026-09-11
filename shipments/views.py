@@ -5,12 +5,20 @@ from .models import Shipment, ShipmentItem
 from devices.models import Device, Location
 from core.excel_utils import new_workbook, xlsx_response, style_header_row, autosize_columns
 
+
+def _is_admin(user):
+    return getattr(getattr(user, 'profile', None), 'role', '') == 'admin'
+
+
 @login_required
 def shipments_list(request):
     return redirect('/admin/shipments/shipment/')
 
 @login_required
 def shipment_create(request):
+    if not _is_admin(request.user):
+        messages.error(request, 'Только администратор может создавать отправки')
+        return redirect('shipments_list')
     if request.method == 'POST':
         receiver_name = request.POST.get('receiver_name')
         receiver_contact = request.POST.get('receiver_contact')
@@ -56,6 +64,9 @@ def shipment_create(request):
 
 @login_required
 def shipment_change_status(request, pk):
+    if not _is_admin(request.user):
+        messages.error(request, 'Только администратор может менять статус отправки')
+        return redirect('shipments_list')
     if request.method == 'POST':
         shipment = get_object_or_404(Shipment, pk=pk)
         new_status = request.POST.get('status')
