@@ -61,8 +61,9 @@ class Command(BaseCommand):
             site_status = '❌'
         
         # Киоски
-        total = Device.objects.filter(hostname__regex=r'^\d{3,}$').count()
-        online = Device.objects.filter(is_online=True).count()
+        scope = Device.objects.filter(hostname__regex=r'^\d{3,}$', in_repair=False)
+        total = scope.count()
+        online = scope.filter(is_online=True).count()
         offline = total - online
         
         # Критические алерты

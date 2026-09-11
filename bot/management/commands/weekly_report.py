@@ -11,9 +11,11 @@ class Command(BaseCommand):
     
     def handle(self, *args, **options):
         week_ago = timezone.now() - timedelta(days=7)
-        
-        total = Device.objects.filter(hostname__regex=r'^\d{3,}$').count()
-        online = Device.objects.filter(is_online=True).count()
+
+        # Киоски в ремонте вынесены из сводки (как в daily_report).
+        scope = Device.objects.filter(hostname__regex=r'^\d{3,}$', in_repair=False)
+        total = scope.count()
+        online = scope.filter(is_online=True).count()
         offline = total - online
         
         repairs = Repair.objects.filter(created_at__gte=week_ago).count()
@@ -30,7 +32,8 @@ class Command(BaseCommand):
         )
         
         recipients = UserProfile.objects.filter(notify_weekly_report=True, telegram_id__isnull=False)
+        n_recipients = recipients.count()
         for up in recipients:
             send_telegram(up.telegram_id, message)
-        
-        self.stdout.write(self.style.SUCCESS(f'Сводка отправлена {recipients.count()} пользователям'))
+
+        self.stdout.write(self.style.SUCCESS(f'Сводка отправлена {n_recipients} пользователям'))

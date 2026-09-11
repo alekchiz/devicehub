@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 import paho.mqtt.client as mqtt
 from django.core.management.base import BaseCommand
@@ -9,6 +10,8 @@ from devices.models import log_device_event
 from devices.notifications import notify_device_status, run_verification_reminders
 from devices.mqtt_utils import safe_str, safe_float, numeric_hostname, check_offline_devices
 from devices.exam_ingest import extract_day_date, ingest_day_snapshot
+
+logger = logging.getLogger('devices.mqtt')
 
 MQTT_BROKER = settings.MQTT_BROKER
 MQTT_PORT = settings.MQTT_PORT
@@ -26,9 +29,9 @@ DAY_TOPICS = [t.strip() for t in
 
 
 def on_day_connect(client, userdata, flags, rc):
-    print(f"📊 Day-broker connected ({DAY_BROKER}) with result code {rc}")
+    logger.info('Day-broker connected (%s), rc=%s', DAY_BROKER, rc)
     if rc != 0:
-        print(f"⚠️ Day-broker connection refused (rc={rc})")
+        logger.warning('Day-broker connection refused (rc=%s)', rc)
         return
     for topic in DAY_TOPICS:
         client.subscribe(f"{topic}/+")
@@ -39,15 +42,15 @@ def on_day_message(client, userdata, msg):
         payload = json.loads(msg.payload.decode('utf-8'))
         day_date = extract_day_date(msg.topic)
         processed = ingest_day_snapshot(payload, day_date)
-        print(f"📊 EXAM_DAY {day_date}: {processed} paks")
+        logger.info('EXAM_DAY %s: %s paks', day_date, processed)
     except Exception as e:
-        print(f"❌ Day MQTT error: {e}")
+        logger.error('Day MQTT error: %s', e)
 
 
 def on_connect(client, userdata, flags, rc):
-    print(f"MQTT connected to {MQTT_BROKER} with result code {rc}")
+    logger.info('MQTT connected to %s, rc=%s', MQTT_BROKER, rc)
     if rc != 0:
-        print(f"⚠️ MQTT connection refused (rc={rc})")
+        logger.warning('MQTT connection refused (rc=%s)', rc)
         return
     client.subscribe(MQTT_TOPIC)
 
@@ -65,13 +68,13 @@ def on_message(client, userdata, msg):
             # на конкретные топики). Здесь — только если day-брокера нет.
             if not DAY_BROKER:
                 processed = ingest_day_snapshot(payload, day_date)
-                print(f"📊 EXAM_DAY {day_date}: {processed} paks")
+                logger.info('EXAM_DAY %s: %s paks', day_date, processed)
             return
 
         host = safe_str(payload.get('host') or payload.get('hostname') or '')
         host = numeric_hostname(host)
         if not host:
-            print(f"⚠️ Пропуск сообщения без hostname: {msg.topic}")
+            logger.warning('Пропуск сообщения без hostname: %s', msg.topic)
             return
 
         now = timezone.now()
@@ -120,12 +123,14 @@ def on_message(client, userdata, msg):
             notify_device_status(device, 'online', 'Связь восстановлена')
 
         status = "Created" if created else "Updated"
-        print(f"✅ {status} device: {host} | online | cpu={defaults.get('cpu_load', '?')}% | ram={defaults.get('memory_percent', '?')}% | disk={defaults.get('hdd_percent', '?')}%")
+        logger.info('%s device: %s | online | cpu=%s%% | ram=%s%% | disk=%s%%',
+                    status, host, defaults.get('cpu_load', '?'),
+                    defaults.get('memory_percent', '?'), defaults.get('hdd_percent', '?'))
 
         check_offline_devices(OFFLINE_TIMEOUT)
 
     except Exception as e:
-        print(f"❌ MQTT message processing error: {e}")
+        logger.error('MQTT message processing error: %s', e)
 
 class Command(BaseCommand):
     help = f'Listen MQTT topics from broker {MQTT_BROKER}'
@@ -141,13 +146,14 @@ class Command(BaseCommand):
             day_client.on_connect = on_day_connect
             day_client.on_message = on_day_message
             day_client.username_pw_set(DAY_USER, DAY_PASS)
-            print(f"📊 Day-broker: connecting to {DAY_BROKER}:{DAY_PORT} (topics: {', '.join(DAY_TOPICS)})")
+            logger.info('Day-broker: connecting to %s:%s (topics: %s)',
+                        DAY_BROKER, DAY_PORT, ', '.join(DAY_TOPICS))
             while True:
                 try:
                     day_client.connect(DAY_BROKER, DAY_PORT, 30)
                     break
                 except Exception as e:
-                    print(f"⚠️ Day-broker connect failed: {e}; retry in 5s")
+                    logger.warning('Day-broker connect failed: %s; retry in 5s', e)
                     time.sleep(5)
             day_client.loop_start()
 
@@ -156,14 +162,14 @@ class Command(BaseCommand):
         client.on_message = on_message
         client.username_pw_set(MQTT_USER, MQTT_PASS)
 
-        print(f"🚀 Connecting to {MQTT_BROKER}:{MQTT_PORT}...")
+        logger.info('Connecting to %s:%s...', MQTT_BROKER, MQTT_PORT)
         while True:
             try:
                 client.connect(MQTT_BROKER, MQTT_PORT, 30)
                 break
             except Exception as e:
-                print(f"⚠️ MQTT connect failed: {e}; retry in 5s")
+                logger.warning('MQTT connect failed: %s; retry in 5s', e)
                 time.sleep(5)
-        print(f"🚀 MQTT listener started (offline timeout: {OFFLINE_TIMEOUT} min)")
+        logger.info('MQTT listener started (offline timeout: %s min)', OFFLINE_TIMEOUT)
 
         client.loop_forever()

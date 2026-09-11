@@ -4,11 +4,15 @@
 "Уведомлять о падении Киоск" и/или "Уведомлять о возврате Киоск" и указать telegram_id.
 """
 import json
+import logging
 import urllib.request
+from django.utils.html import escape
 
 from django.conf import settings
 
 from accounts.models import UserProfile
+
+logger = logging.getLogger('devices.notifications')
 
 
 def send_telegram(telegram_id, message):
@@ -22,7 +26,7 @@ def send_telegram(telegram_id, message):
         urllib.request.urlopen(req, timeout=5)
         return True
     except Exception as e:
-        print(f"Telegram send error: {e}")
+        logger.error('Telegram send error: %s', e)
         return False
 
 
@@ -37,12 +41,12 @@ def notify_device_status(device, event, message=''):
 
     if event == 'offline':
         text = (f"🚨 <b>Киоск оффлайн</b>\n"
-                f"Киоск: <b>{device.hostname}</b>\n"
-                f"{message}")
+                f"Киоск: <b>{escape(device.hostname)}</b>\n"
+                f"{escape(message)}")
     else:
         text = (f"✅ <b>Киоск вернулся онлайн</b>\n"
-                f"Киоск: <b>{device.hostname}</b>\n"
-                f"{message}")
+                f"Киоск: <b>{escape(device.hostname)}</b>\n"
+                f"{escape(message)}")
 
     for profile in recipients:
         send_telegram(profile.telegram_id, text)
@@ -67,8 +71,8 @@ def notify_verification_expiry(verification):
 
     text = (
         f"{head}\n"
-        f"Оборудование: <b>{verification.get_equipment_type_display()}</b>"
-        f"{' на киоске ' + verification.device.hostname if verification.device else ''}\n"
+        f"Оборудование: <b>{escape(verification.get_equipment_type_display())}</b>"
+        f"{' на киоске ' + escape(verification.device.hostname) if verification.device else ''}\n"
         f"Действует до: <b>{verification.valid_until:%d.%m.%Y}</b>"
     )
 
