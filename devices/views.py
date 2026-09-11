@@ -255,7 +255,13 @@ def ssh_change_password(device, new_password):
 
 
 def _ssh_vnc_setup(device, vnc_password):
-    """Настраивает x0vncserver на ПАК: кладёт пароль в .vnc/passwd и рестартит сервис."""
+    """Настраивает VNC на ПАК: кладёт пароль в .vnc/passwd и рестартит сервис.
+
+    Автовыбор сервиса по тому, что установлено на киоске: сначала пробуем
+    x0vncserver.service (новый ПАК), иначе x11vnc.service (старые ПАК после
+    client/x11vnc_setup.py). Файл пароля генерируется vncpasswd (RFB-формат),
+    совместим с -rfbauth у x11vnc и с passwd у x0vncserver.
+    """
     if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
         return _SSHFailed('SSH: у киоска нет VPN IP')
 
@@ -268,7 +274,11 @@ def _ssh_vnc_setup(device, vnc_password):
                 "&& chown terminal:terminal /home/terminal/.vnc/passwd.new "
                 "&& chmod 600 /home/terminal/.vnc/passwd.new "
                 "&& mv -f /home/terminal/.vnc/passwd.new /home/terminal/.vnc/passwd "
-                "&& systemctl restart x0vncserver.service\"").format(sudo=es, vnc=ev)
+                "&& {{ if systemctl list-unit-files x0vncserver.service >/dev/null 2>&1; "
+                "then systemctl restart x0vncserver.service; "
+                "elif systemctl list-unit-files x11vnc.service >/dev/null 2>&1; "
+                "then systemctl restart x11vnc.service; "
+                "else echo 'VNC-сервис не найден (нет x0vncserver или x11vnc)' >&2; exit 1; fi; }}\"").format(sudo=es, vnc=ev)
 
     return _ssh_run(device.vpn_ip, None, _ssh_candidate_passwords(device),
                     sudo_passwords=_ssh_sudo_passwords(device),
@@ -745,7 +755,7 @@ def device_set_password(request, pk):
 
 @user_passes_test(is_admin)
 def device_vnc_setup(request, pk):
-    """Настраивает VNC (x0vncserver) на киоске по кнопке и ставит vnc_ready."""
+    """Настраивает VNC на киоске по кнопке (автовыбор x0vncserver/x11vnc) и ставит vnc_ready."""
     device = get_object_or_404(Device, pk=pk)
     if request.method == 'POST':
         if not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
@@ -758,7 +768,7 @@ def device_vnc_setup(request, pk):
         result = _ssh_vnc_setup(device, vnc_pass)
         if result.returncode == 0:
             Device.objects.filter(pk=device.pk).update(vnc_ready=True)
-            messages.success(request, f'{device.hostname}: VNC настроен (x0vncserver, порт 5900)')
+            messages.success(request, f'{device.hostname}: VNC настроен (порт 5900)')
         else:
             messages.warning(
                 request, f'{device.hostname}: {result.stderr.strip() or "ошибка настройки VNC"}')

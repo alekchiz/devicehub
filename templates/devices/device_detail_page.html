@@ -33,7 +33,7 @@
         <div class="hero-actions">
             <a href="ssh://terminal@{{ device.vpn_ip }}" class="hero-btn" title="Открыть SSH"><i class="bi bi-terminal"></i> SSH</a>
             {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
-            <a href="vnc://{{ device.vpn_ip }}:5900" class="hero-btn" title="Открыть VNC (x0vncserver, порт 5900)"><i class="bi bi-eye"></i> VNC</a>
+            <a href="vnc://{{ device.vpn_ip }}:5900" class="hero-btn" title="Открыть VNC (порт 5900)"><i class="bi bi-eye"></i> VNC</a>
             {% endif %}
             <a href="{% url 'export_device_report' device.pk %}" class="hero-btn"><i class="bi bi-file-earmark-excel"></i> Сводка</a>
             <a href="{% url 'dashboard' %}" class="hero-btn"><i class="bi bi-arrow-left"></i> Дашборд</a>
@@ -110,7 +110,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="text-muted">VNC (x0vncserver)</td>
+                        <td class="text-muted">VNC (порт 5900)</td>
                         <td>
                             {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
                             <a href="vnc://{{ device.vpn_ip }}:5900" class="btn-soft btn-outline-info btn-sm"><i class="bi bi-eye"></i> {{ device.vpn_ip }}:5900</a>
@@ -209,9 +209,9 @@
     <div class="card-body">
         <div class="d-flex flex-wrap gap-2 mb-3">
             <form method="post" action="{% url 'device_vnc_setup' device.pk %}" class="d-inline"
-                  onsubmit="return confirm('Настроить VNC (x0vncserver) на киоске? (будет перезапуск)');">
+                  onsubmit="return confirm('Настроить VNC (x0vncserver или x11vnc) на киоске? (будет перезапуск)');">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-soft btn-outline-info btn-sm"><i class="bi bi-gear"></i> Настроить VNC (x0vncserver)</button>
+                <button type="submit" class="btn btn-soft btn-outline-info btn-sm"><i class="bi bi-gear"></i> Настроить VNC</button>
             </form>
             <form method="post" action="{% url 'device_deploy_agent' device.pk %}" class="d-inline"
                   onsubmit="return confirm('Закинуть обновлённый info2mqtt.py на киоск?');">

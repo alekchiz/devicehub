@@ -898,6 +898,27 @@ class MigrateSshPasswordsCommandTests(TestCase):
         self.assertEqual(device.ssh_password, 'Pochta@medQaZ')
 
 
+class VncSshSetupTests(TestCase):
+    @override_settings(DEVICE_SSH_PASSWORD='login-pass',
+                       DEVICE_SSH_SUDO_PASSWORD='sudo-pass')
+    @patch('devices.views.subprocess.run')
+    def test_auto_selects_vnc_service(self, m):
+        from devices.views import _ssh_vnc_setup
+        device = Device.objects.create(hostname='900', vpn_ip='10.0.0.9')
+
+        def fake(args, capture_output=True, text=True, timeout=10):
+            remote = args[-1]
+            self.assertIn('x0vncserver.service', remote)
+            self.assertIn('x11vnc.service', remote)
+            self.assertIn('systemctl list-unit-files', remote)
+            return SimpleNamespace(returncode=0, stdout='', stderr='')
+
+        m.side_effect = fake
+        res = _ssh_vnc_setup(device, 'vnc-pass')
+        self.assertEqual(res.returncode, 0)
+        self.assertEqual(m.call_count, 1)  # первый же sudo-пароль подошёл
+
+
 class VncSetupViewTests(TestCase):
     @override_settings(DEVICE_VNC_PASSWORD='vnc-pass')
     @patch('devices.views._ssh_vnc_setup')
