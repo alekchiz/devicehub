@@ -1,4 +1,5 @@
 import json
+import time
 import paho.mqtt.client as mqtt
 from django.core.management.base import BaseCommand
 from django.conf import settings
@@ -26,6 +27,9 @@ DAY_TOPICS = [t.strip() for t in
 
 def on_day_connect(client, userdata, flags, rc):
     print(f"📊 Day-broker connected ({DAY_BROKER}) with result code {rc}")
+    if rc != 0:
+        print(f"⚠️ Day-broker connection refused (rc={rc})")
+        return
     for topic in DAY_TOPICS:
         client.subscribe(f"{topic}/+")
 
@@ -42,6 +46,9 @@ def on_day_message(client, userdata, msg):
 
 def on_connect(client, userdata, flags, rc):
     print(f"MQTT connected to {MQTT_BROKER} with result code {rc}")
+    if rc != 0:
+        print(f"⚠️ MQTT connection refused (rc={rc})")
+        return
     client.subscribe(MQTT_TOPIC)
 
 def on_message(client, userdata, msg):
@@ -54,12 +61,18 @@ def on_message(client, userdata, msg):
         # Суточный снимок осмотров: …*/day/YYYY-MM-DD
         day_date = extract_day_date(msg.topic)
         if day_date:
-            processed = ingest_day_snapshot(payload, day_date)
-            print(f"📊 EXAM_DAY {day_date}: {processed} paks")
+            # Суточные снимки обрабатывает выделенный day-клиент (он подписан
+            # на конкретные топики). Здесь — только если day-брокера нет.
+            if not DAY_BROKER:
+                processed = ingest_day_snapshot(payload, day_date)
+                print(f"📊 EXAM_DAY {day_date}: {processed} paks")
             return
 
-        host = payload.get('host') or payload.get('hostname') or 'unknown'
+        host = safe_str(payload.get('host') or payload.get('hostname') or '')
         host = numeric_hostname(host)
+        if not host:
+            print(f"⚠️ Пропуск сообщения без hostname: {msg.topic}")
+            return
 
         now = timezone.now()
 
@@ -129,7 +142,13 @@ class Command(BaseCommand):
             day_client.on_message = on_day_message
             day_client.username_pw_set(DAY_USER, DAY_PASS)
             print(f"📊 Day-broker: connecting to {DAY_BROKER}:{DAY_PORT} (topics: {', '.join(DAY_TOPICS)})")
-            day_client.connect(DAY_BROKER, DAY_PORT, 60)
+            while True:
+                try:
+                    day_client.connect(DAY_BROKER, DAY_PORT, 30)
+                    break
+                except Exception as e:
+                    print(f"⚠️ Day-broker connect failed: {e}; retry in 5s")
+                    time.sleep(5)
             day_client.loop_start()
 
         client = mqtt.Client()
@@ -138,7 +157,13 @@ class Command(BaseCommand):
         client.username_pw_set(MQTT_USER, MQTT_PASS)
 
         print(f"🚀 Connecting to {MQTT_BROKER}:{MQTT_PORT}...")
-        client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        while True:
+            try:
+                client.connect(MQTT_BROKER, MQTT_PORT, 30)
+                break
+            except Exception as e:
+                print(f"⚠️ MQTT connect failed: {e}; retry in 5s")
+                time.sleep(5)
         print(f"🚀 MQTT listener started (offline timeout: {OFFLINE_TIMEOUT} min)")
 
         client.loop_forever()

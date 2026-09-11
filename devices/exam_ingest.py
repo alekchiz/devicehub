@@ -2,7 +2,7 @@
 import re
 from datetime import datetime
 
-from django.utils import timezone
+from django.db import IntegrityError, transaction
 
 from .models import Device, Client, Location, DailyExam
 
@@ -48,54 +48,63 @@ def ingest_day_snapshot(payload, topic_date=None):
         return 0
 
     count = 0
-    for item in payload.get('items') or []:
-        if not isinstance(item, dict):
-            continue
-        sn = item.get('sn')
-        if sn is None:
-            continue
-        sn = str(sn).strip()
-        if not sn:
-            continue
+    with transaction.atomic():
+        for item in payload.get('items') or []:
+            if not isinstance(item, dict):
+                continue
+            sn = item.get('sn')
+            if sn is None:
+                continue
+            sn = str(sn).strip()
+            if not sn:
+                continue
 
-        device = (Device.objects.filter(hostname__iexact=sn).first()
-                  or Device.objects.filter(sn__iexact=sn).first())
-        if not device:
-            device = Device.objects.create(hostname=sn)
+            device = (Device.objects.filter(hostname__iexact=sn).first()
+                      or Device.objects.filter(sn__iexact=sn).first())
+            if not device:
+                # Гонка: два потока (основной и day-клиент) могут одновременно
+                # не найти киоск. Повторяем попытку с учётом IntegrityError.
+                try:
+                    with transaction.atomic():
+                        device = Device.objects.create(hostname=sn)
+                except IntegrityError:
+                    device = Device.objects.filter(hostname__iexact=sn).first()
+                    if not device:
+                        continue
 
-        exams = _parse_int(item.get('exams'))
-        cancelled = _parse_int(item.get('cancelled'))
-        client_name = (item.get('client') or '').strip()
-        orgunit = (item.get('orgunit') or '').strip()
-        last_exam = _parse_datetime(item.get('last_exam'))
+            exams = _parse_int(item.get('exams'))
+            cancelled = _parse_int(item.get('cancelled'))
+            client_name = (item.get('client') or '').strip()
+            orgunit = (item.get('orgunit') or '').strip()
+            last_exam = _parse_datetime(item.get('last_exam'))
 
-        DailyExam.objects.update_or_create(
-            device=device,
-            date=day,
-            defaults={
-                'exams': exams,
-                'cancelled': cancelled,
-                'group': (item.get('group') or '').strip(),
-                'client': client_name,
-                'orgunit': orgunit,
-                'last_exam': last_exam,
-            },
-        )
+            DailyExam.objects.update_or_create(
+                device=device,
+                date=day,
+                defaults={
+                    'exams': exams,
+                    'cancelled': cancelled,
+                    'group': (item.get('group') or '').strip(),
+                    'client': client_name,
+                    'orgunit': orgunit,
+                    'last_exam': last_exam,
+                },
+            )
 
-        update_fields = []
-        if client_name:
-            client, _ = Client.objects.get_or_create(name=client_name)
-            if device.client_id != client.pk:
-                device.client = client
-                update_fields.append('client')
-        if orgunit:
-            location, _ = Location.objects.get_or_create(name=orgunit)
-            if device.location_id != location.pk:
-                device.location = location
-                update_fields.append('location')
+            update_fields = []
+            if client_name:
+                client, _ = Client.objects.get_or_create(name=client_name)
+                if device.client_id != client.pk:
+                    device.client = client
+                    update_fields.append('client')
+            if orgunit:
+                location, _ = Location.objects.get_or_create(name=orgunit)
+                if device.location_id != location.pk:
+                    device.location = location
+                    update_fields.append('location')
 
-        if update_fields:
-            device.save(update_fields=update_fields)
-        count += 1
+            if update_fields:
+                device.save(update_fields=update_fields)
+            count += 1
 
     return count
