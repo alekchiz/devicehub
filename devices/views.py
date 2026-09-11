@@ -255,35 +255,71 @@ def ssh_change_password(device, new_password):
 
 
 def _ssh_vnc_setup(device, vnc_password):
-    """Настраивает VNC на ПАК: кладёт пароль в .vnc/passwd и рестартит сервис.
+    """Настраивает VNC на ПАК: кладёт пароль в .vnc/passwd и запускает сервис.
 
-    Автовыбор сервиса по тому, что установлено на киоске: сначала пробуем
-    x0vncserver.service (новый ПАК), иначе x11vnc.service (старые ПАК после
-    client/x11vnc_setup.py). Файл пароля генерируется в RFB-формате (совместим
-    с -rfbauth у x11vnc и с passwd у x0vncserver): через vncpasswd -f, а если
-    vncpasswd нет — через x11vnc -storepasswd.
+    Сервис автовыбирается по тому, что есть на киоске: x0vncserver.service
+    (новый ПАК), затем x11vnc.service (старые ПАК), а если юнита нет, но стоит
+    x11vnc — создаёт x11vnc.service и запускает его. Файл пароля — RFB-формат:
+    vncpasswd -f, а при его отсутствии — x11vnc -storepasswd (совместим с
+    x0vncserver и x11vnc). Скрипт передаётся в base64, чтобы не зависеть от
+    кавычек и $ в содержании.
     """
     if not device or not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
         return _SSHFailed('SSH: у киоска нет VPN IP')
 
+    unit = (
+        "[Unit]\n"
+        "Description=x11vnc remote desktop (MedKiosk PAK)\n"
+        "After=systemd-user-sessions.service\n"
+        "\n"
+        "[Service]\n"
+        "Type=simple\n"
+        "ExecStart=/usr/bin/x11vnc -forever -shared "
+        "-rfbauth /home/terminal/.vnc/passwd -display :0 -rfbport 5900 "
+        "-auth guess -xkb -noxrecord -noxfixes -noxdamage\n"
+        "Restart=always\n"
+        "RestartSec=3\n"
+        "\n"
+        "[Install]\n"
+        "WantedBy=multi-user.target\n"
+    )
+
     def vnc_cmd(sudo_pwd):
+        import base64
         es = sudo_pwd.replace("'", "'\\''")
         ev = vnc_password.replace("'", "'\\''")
+        script = ("passfile=/home/terminal/.vnc/passwd.new\n"
+                  "if command -v vncpasswd >/dev/null 2>&1; then\n"
+                  "  printf '%s\\n' '__VNC__' | vncpasswd -f > \"$passfile\"\n"
+                  "elif command -v x11vnc >/dev/null 2>&1; then\n"
+                  "  x11vnc -storepasswd '__VNC__' \"$passfile\" >/dev/null 2>&1\n"
+                  "else\n"
+                  "  echo 'Нет vncpasswd и x11vnc для создания пароля VNC' >&2\n"
+                  "  exit 1\n"
+                  "fi\n"
+                  "chown terminal:terminal \"$passfile\"\n"
+                  "chmod 600 \"$passfile\"\n"
+                  "mv -f \"$passfile\" /home/terminal/.vnc/passwd\n"
+                  "if systemctl list-unit-files x0vncserver.service >/dev/null 2>&1; then\n"
+                  "  systemctl restart x0vncserver.service\n"
+                  "elif systemctl list-unit-files x11vnc.service >/dev/null 2>&1; then\n"
+                  "  systemctl restart x11vnc.service\n"
+                  "elif command -v x11vnc >/dev/null 2>&1; then\n"
+                  "  printf '%s' '__UNIT_B64__' | base64 -d > /etc/systemd/system/x11vnc.service\n"
+                  "  systemctl daemon-reload\n"
+                  "  systemctl enable x11vnc.service >/dev/null 2>&1 || true\n"
+                  "  systemctl restart x11vnc.service\n"
+                  "else\n"
+                  "  echo 'VNC-сервис не установлен и x11vnc отсутствует' >&2\n"
+                  "  exit 1\n"
+                  "fi\n")
+        script = script.replace('__VNC__', ev).replace(
+            '__UNIT_B64__', base64.b64encode(unit.encode('utf-8')).decode('ascii'))
+        script_b64 = base64.b64encode(script.encode('utf-8')).decode('ascii')
         return ("mkdir -p /home/terminal/.vnc && "
                 "printf '%s\\n' '{sudo}' | LC_ALL=C sudo -S sh -c "
-                "\"{{ if command -v vncpasswd >/dev/null 2>&1; then "
-                "printf '%s\\n' '{vnc}' | vncpasswd -f > /home/terminal/.vnc/passwd.new; "
-                "elif command -v x11vnc >/dev/null 2>&1; then "
-                "x11vnc -storepasswd '{vnc}' /home/terminal/.vnc/passwd.new >/dev/null 2>&1; "
-                "else echo 'Нет vncpasswd и x11vnc для создания пароля VNC' >&2; exit 1; fi; }} && "
-                "chown terminal:terminal /home/terminal/.vnc/passwd.new "
-                "&& chmod 600 /home/terminal/.vnc/passwd.new "
-                "&& mv -f /home/terminal/.vnc/passwd.new /home/terminal/.vnc/passwd "
-                "&& {{ if systemctl list-unit-files x0vncserver.service >/dev/null 2>&1; "
-                "then systemctl restart x0vncserver.service; "
-                "elif systemctl list-unit-files x11vnc.service >/dev/null 2>&1; "
-                "then systemctl restart x11vnc.service; "
-                "else echo 'VNC-сервис не найден (нет x0vncserver или x11vnc)' >&2; exit 1; fi; }}\"").format(sudo=es, vnc=ev)
+                "\"$(printf '%s' '{script}' | base64 -d)\"").format(
+                    sudo=es, script=script_b64)
 
     return _ssh_run(device.vpn_ip, None, _ssh_candidate_passwords(device),
                     sudo_passwords=_ssh_sudo_passwords(device),

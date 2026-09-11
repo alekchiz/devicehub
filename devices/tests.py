@@ -903,16 +903,24 @@ class VncSshSetupTests(TestCase):
                        DEVICE_SSH_SUDO_PASSWORD='sudo-pass')
     @patch('devices.views.subprocess.run')
     def test_auto_selects_vnc_service(self, m):
+        import base64
+        import re
         from devices.views import _ssh_vnc_setup
         device = Device.objects.create(hostname='900', vpn_ip='10.0.0.9')
 
         def fake(args, capture_output=True, text=True, timeout=10):
             remote = args[-1]
-            self.assertIn('x0vncserver.service', remote)
-            self.assertIn('x11vnc.service', remote)
-            self.assertIn('systemctl list-unit-files', remote)
-            self.assertIn('vncpasswd -f', remote)
-            self.assertIn("x11vnc -storepasswd", remote)
+            # Скрипт передаётся в base64 как аргумент sh -c.
+            hit = re.search(r"\$\(printf '%s' '([A-Za-z0-9+/=]+)' \| base64 -d\)", remote)
+            self.assertTrue(hit, 'base64-скрипт не найден в команде')
+            script = base64.b64decode(hit.group(1)).decode('utf-8')
+            self.assertIn('x0vncserver.service', script)
+            self.assertIn('x11vnc.service', script)
+            self.assertIn('systemctl list-unit-files', script)
+            self.assertIn('vncpasswd -f', script)
+            self.assertIn('x11vnc -storepasswd', script)
+            self.assertIn('/etc/systemd/system/x11vnc.service', script)
+            self.assertIn('systemctl daemon-reload', script)
             return SimpleNamespace(returncode=0, stdout='', stderr='')
 
         m.side_effect = fake
