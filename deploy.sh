@@ -11,8 +11,11 @@
 set -euo pipefail
 
 # ----- Параметры (можно переопределить через переменные окружения) -----
-SERVER="${SERVER:-root@support-pak.ru}"
-REMOTE_DIR="${REMOTE_DIR:-/app/devicehub}"
+# Алиас «devicehub» из ~/.ssh/config (HostName 144.31.240.237) — на этом сервере
+# поддержан host key, в отличие от root@support-pak.ru. Каталог развёртывания —
+# /root/devicehub (см. docker compose ls).
+SERVER="${SERVER:-devicehub}"
+REMOTE_DIR="${REMOTE_DIR:-/root/devicehub}"
 LOCAL_DIR="${LOCAL_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 
 # Что НЕ переносим на сервер
