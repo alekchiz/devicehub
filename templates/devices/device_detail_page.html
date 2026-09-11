@@ -209,9 +209,9 @@
     <div class="card-body">
         <div class="d-flex flex-wrap gap-2 mb-3">
             <form method="post" action="{% url 'device_vnc_setup' device.pk %}" class="d-inline"
-                  onsubmit="return confirm('Настроить VNC на киоске? (будет перезапуск)');">
+                  onsubmit="return confirm('Настроить VNC (x0vncserver) на киоске? (будет перезапуск)');">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-soft btn-outline-info btn-sm"><i class="bi bi-gear"></i> Настроить VNC</button>
+                <button type="submit" class="btn btn-soft btn-outline-info btn-sm"><i class="bi bi-gear"></i> Настроить VNC (x0vncserver)</button>
             </form>
             <form method="post" action="{% url 'device_deploy_agent' device.pk %}" class="d-inline"
                   onsubmit="return confirm('Закинуть обновлённый info2mqtt.py на киоск?');">
