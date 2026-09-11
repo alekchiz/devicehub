@@ -72,23 +72,27 @@ def ingest_day_snapshot(payload, topic_date=None):
                     if not device:
                         continue
 
-            exams = _parse_int(item.get('exams'))
-            cancelled = _parse_int(item.get('cancelled'))
             client_name = (item.get('client') or '').strip()
             orgunit = (item.get('orgunit') or '').strip()
             last_exam = _parse_datetime(item.get('last_exam'))
 
+            # exams/cancelled пишем только если поле реально пришло: иначе
+            # частичный payload обнулял бы ранее сохранённые значения.
+            defaults = {
+                'group': (item.get('group') or '').strip(),
+                'client': client_name,
+                'orgunit': orgunit,
+                'last_exam': last_exam,
+            }
+            if 'exams' in item:
+                defaults['exams'] = _parse_int(item['exams'])
+            if 'cancelled' in item:
+                defaults['cancelled'] = _parse_int(item['cancelled'])
+
             DailyExam.objects.update_or_create(
                 device=device,
                 date=day,
-                defaults={
-                    'exams': exams,
-                    'cancelled': cancelled,
-                    'group': (item.get('group') or '').strip(),
-                    'client': client_name,
-                    'orgunit': orgunit,
-                    'last_exam': last_exam,
-                },
+                defaults=defaults,
             )
 
             update_fields = []

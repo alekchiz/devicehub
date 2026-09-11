@@ -135,30 +135,41 @@ class Repair(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Последнее изменение")
     
     def save(self, *args, **kwargs):
+        from django.db import transaction
         from django.utils import timezone
         previous_status = None
         if self.pk:
             previous_status = Repair.objects.filter(pk=self.pk).values_list('status', flat=True).first()
 
-        if self.status in ('created', 'in_progress'):
-            self.device.in_repair = True
-            if not self.in_progress_at:
-                if self.status == 'in_progress':
-                    self.in_progress_at = timezone.now()
-        elif self.status == 'ready':
-            self.device.in_repair = False
-            if not self.ready_at:
-                self.ready_at = timezone.now()
-        self.device.save()
-        super().save(*args, **kwargs)
+        desired_repair = self.status in ('created', 'in_progress')
+        if self.status == 'in_progress' and not self.in_progress_at:
+            self.in_progress_at = timezone.now()
+        elif self.status == 'ready' and not self.ready_at:
+            self.ready_at = timezone.now()
 
+        enter_event = None
+        leave_event = None
         if previous_status != self.status:
-            entering_repair = self.status in ('created', 'in_progress')
-            leaving_repair = self.status == 'ready'
-            if leaving_repair and previous_status in ('created', 'in_progress'):
-                log_device_event(self.device, 'repair_out', f'Ремонт #{self.pk} завершён')
-            elif entering_repair and (previous_status is None or previous_status == 'ready'):
-                log_device_event(self.device, 'repair_in', f'Ремонт #{self.pk}: {self.problem[:80]}')
+            if (self.status == 'ready'
+                    and previous_status in ('created', 'in_progress')):
+                leave_event = ('repair_out', f'Ремонт #{self.pk} завершён')
+            elif desired_repair and (previous_status is None or previous_status == 'ready'):
+                enter_event = ('repair_in', f'Ремонт #{self.pk}: {self.problem[:80]}')
+
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            # Флаг киоска вычисляем по фактически активным ремонтам, а не по
+            # одному этому — иначе два параллельных ремонта ломали бы состояние.
+            has_active = Repair.objects.filter(
+                device=self.device, status__in=('created', 'in_progress')
+            ).exclude(pk=self.pk).exists()
+            self.device.in_repair = desired_repair or has_active
+            Device.objects.filter(pk=self.device.pk).update(in_repair=self.device.in_repair)
+
+        if enter_event:
+            log_device_event(self.device, *enter_event)
+        if leave_event:
+            log_device_event(self.device, *leave_event)
     
     def __str__(self):
         return f"Ремонт {self.device.hostname} - {self.get_status_display()}"
