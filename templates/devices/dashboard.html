@@ -247,6 +247,7 @@
                 <div class="med-indicators">
                     <span class="mi {% if device.alco_enabled is False %}off{% elif device.alco_ok %}ok{% else %}err{% endif %}" title="Алкотестер: {% if device.alco_enabled is False %}выключен{% elif device.alco_ok %}подключён{% else %}проблема{% endif %}"><i class="bi {% if device.alco_enabled is False %}bi-power{% elif device.alco_ok %}bi-droplet-half{% else %}bi-droplet{% endif %}"></i> Алко</span>
                     <span class="mi {% if device.tonometer_enabled is False %}off{% elif device.tono_ok %}ok{% else %}err{% endif %}" title="Тонометр: {% if device.tonometer_enabled is False %}выключен{% elif device.tono_ok %}подключён{% else %}проблема{% endif %}"><i class="bi {% if device.tonometer_enabled is False %}bi-power{% elif device.tono_ok %}bi-heart-pulse{% else %}bi-heart{% endif %}"></i> Тоно</span>
+                    <span class="mi {% if device.thermometer_enabled is False %}off{% else %}ok{% endif %}" title="Термометр: {% if device.thermometer_enabled is False %}выключен{% else %}включён{% endif %}"><i class="bi {% if device.thermometer_enabled is False %}bi-power{% else %}bi-thermometer-half{% endif %}"></i> Термо</span>
                 </div>
                 {% with latest_day=today_exams|get_item:device.pk %}
                 <div class="meta dc-exams"><i class="bi bi-clipboard-check"></i> Осмотров сегодня: {% if latest_day is not None %}{{ latest_day }}{% else %}0{% endif %}</div>

@@ -487,6 +487,7 @@ def main():
         "alco_enabled": get_module_enabled("dingo.params.enabled"),
         "tonometer": get_tonometer_status(),
         "tonometer_enabled": get_module_enabled("andble.params.enabled"),
+        "thermometer_enabled": get_module_enabled("sensitecwebcamdetection.params.enabled"),
         "software": get_software_version(),
         "network_speed": get_network_speed(),
         "uptime": get_uptime_seconds(),

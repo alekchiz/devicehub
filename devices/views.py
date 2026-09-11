@@ -384,8 +384,10 @@ def _toggle_module_in_conf(content, key, action):
         else:
             out.append(raw)
 
-    if not found and action == 'disable':
-        out.append('{} = false'.format(key))
+    if not found:
+        # Строка отсутствует: добавляем закомментированной (вкл) или активной (выкл).
+        out.append('#{} = false'.format(key) if action == 'enable'
+                   else '{} = false'.format(key))
         changed = True
     return '\n'.join(out), changed
 
@@ -874,14 +876,17 @@ def device_toggle_module(request, pk, module, action):
         return redirect('device_detail_page', pk=pk)
 
     new_conf, changed = _toggle_module_in_conf(conf, key, action)
-    label = 'алкотестер' if module == 'alco' else 'тонометр'
+    labels = {'alco': 'алкотестер', 'tonometer': 'тонометр', 'thermometer': 'термометр'}
+    fields = {'alco': 'alco_enabled', 'tonometer': 'tonometer_enabled',
+              'thermometer': 'thermometer_enabled'}
+    label = labels.get(module, module)
     verb = 'включён' if action == 'enable' else 'выключен'
     if not changed:
         messages.success(request, f'{device.hostname}: {label} уже {verb}')
         return redirect('device_detail_page', pk=pk)
 
     if _write_device_conf(device, new_conf):
-        field = 'alco_enabled' if module == 'alco' else 'tonometer_enabled'
+        field = fields.get(module, module + '_enabled')
         Device.objects.filter(pk=device.pk).update(**{field: (action == 'enable')})
         ssh_reboot(device)
         messages.success(request, f'{device.hostname}: {label} {verb}, киоск перезапускается')

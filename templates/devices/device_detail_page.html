@@ -161,6 +161,13 @@
                             <div class="text-muted small">{{ device.tonometer|default:"—" }}</div>
                         </td>
                     </tr>
+                    <tr>
+                        <td class="text-muted"><i class="bi bi-thermometer-half"></i> Термометр</td>
+                        <td>
+                            <span class="badge-soft vs-{% if device.thermometer_enabled is False %}expired{% else %}ok{% endif %}">{% if device.thermometer_enabled is False %}выкл{% else %}вкл{% endif %}</span>
+                            <div class="text-muted small">{% if device.thermometer_enabled is False %}выключен{% else %}включён{% endif %}</div>
+                        </td>
+                    </tr>
                 </table>
                 {% if user.profile.role == 'admin' and module_states %}
                 <div class="mt-2 pt-2 border-top">
@@ -194,6 +201,22 @@
                                 <span class="text-danger">❌</span>
                                 <form method="post" action="{% url 'device_toggle_module' device.pk 'tonometer' 'enable' %}" class="d-inline"
                                       onsubmit="return confirm('Включить тонометр? Будет перезапуск.');">
+                                    {% csrf_token %}<button class="btn btn-outline-success btn-sm">Вкл</button>
+                                </form>
+                            {% endif %}
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <small class="text-muted">Термо:</small>
+                            {% if module_states.thermometer %}
+                                <span class="text-success">✅</span>
+                                <form method="post" action="{% url 'device_toggle_module' device.pk 'thermometer' 'disable' %}" class="d-inline"
+                                      onsubmit="return confirm('Выключить термометр? Будет перезапуск.');">
+                                    {% csrf_token %}<button class="btn btn-outline-danger btn-sm">Выкл</button>
+                                </form>
+                            {% else %}
+                                <span class="text-danger">❌</span>
+                                <form method="post" action="{% url 'device_toggle_module' device.pk 'thermometer' 'enable' %}" class="d-inline"
+                                      onsubmit="return confirm('Включить термометр? Будет перезапуск.');">
                                     {% csrf_token %}<button class="btn btn-outline-success btn-sm">Вкл</button>
                                 </form>
                             {% endif %}

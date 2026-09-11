@@ -121,6 +121,7 @@ DEVICE_SSH_PUBLIC_KEYS = [
 DEVICE_MODULE_TOGGLE_KEYS = {
     'alco': 'dingo.params.enabled',
     'tonometer': 'andble.params.enabled',
+    'thermometer': 'sensitecwebcamdetection.params.enabled',
 }
 # Резервные SSH-пароли (через запятую): пробуются по очереди, если у киоска
 # не задан свой пароль и глобальный не подошёл.

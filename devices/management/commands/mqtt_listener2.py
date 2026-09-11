@@ -87,6 +87,7 @@ def on_message(client, userdata, msg):
             'tonometer': safe_str(payload.get('tonometer', '')),
             'alco_enabled': payload.get('alco_enabled'),
             'tonometer_enabled': payload.get('tonometer_enabled'),
+            'thermometer_enabled': payload.get('thermometer_enabled'),
             'software': safe_str(payload.get('software', '')),
             'network_speed': safe_str(payload.get('network_speed', '')),
             'uptime': safe_str(payload.get('uptime', '')),

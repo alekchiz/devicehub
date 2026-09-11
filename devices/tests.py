@@ -388,7 +388,7 @@ class DeviceMedIndicatorTests(TestCase):
         resp = self.client.get(reverse('dashboard'))
         self.assertContains(resp, 'med-indicators')
         self.assertContains(resp, 'mi ok')
-        self.assertNotContains(resp, 'bi-thermometer-half')
+        self.assertContains(resp, 'bi-thermometer-half')  # индикатор термометра
 
 
 class VerificationTests(TestCase):
@@ -1012,6 +1012,26 @@ class ToggleModuleTests(TestCase):
         self.assertIn("dingo.params.enabled = false", out2)
         self.assertIn("keep = x", out2)
 
+    def test_thermometer_missing_line_and_deviceaddress_untouched(self):
+        from devices.views import _module_enabled, _toggle_module_in_conf
+        key = "sensitecwebcamdetection.params.enabled"
+        address = 'andble.params.tonometer.deviceAddress = "6C:B2:FD:CA:AB:BF"'
+        conf = address + "\n"
+
+        # Всего лишь отсутствующая строка: для "выключить" добавляем активную false.
+        out, changed = _toggle_module_in_conf(conf, key, "disable")
+        self.assertTrue(changed)
+        self.assertIn(key + " = false", out)
+        self.assertFalse(_module_enabled(out, key))
+        self.assertIn(address, out)  # deviceAddress не тронут
+
+        # Для "включить" добавляем закомментированную строку.
+        out2, changed2 = _toggle_module_in_conf(conf, key, "enable")
+        self.assertTrue(changed2)
+        self.assertIn("#" + key + " = false", out2)
+        self.assertTrue(_module_enabled(out2, key))
+        self.assertIn(address, out2)  # deviceAddress не тронут
+
     @patch('devices.views._read_device_conf',
            return_value="#andble.params.enabled = false\ndingo.params.enabled = false\n")
     @patch('devices.views._write_device_conf', return_value=True)
@@ -1028,6 +1048,27 @@ class ToggleModuleTests(TestCase):
         resp = self.client.post(
             reverse('device_toggle_module', args=[device.pk, 'tonometer', 'disable']))
         self.assertRedirects(resp, reverse('device_detail_page', args=[device.pk]))
+        mw.assert_called_once()
+        mr.assert_called_once()
+
+    @patch('devices.views._read_device_conf',
+           return_value="andble.params.tonometer.deviceAddress = \"6C:B2:FD:CA:AB:BF\"\n")
+    @patch('devices.views._write_device_conf', return_value=True)
+    @patch('devices.views.ssh_reboot')
+    def test_disable_thermometer_sets_field_and_keeps_address(self, mr, mw, mr_conf):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+        admin = User.objects.create_user(username='modadm2', password='p')
+        admin.profile.role = 'admin'
+        admin.profile.save()
+        device = Device.objects.create(hostname='559', vpn_ip='10.0.0.9', is_online=True)
+        self.client.force_login(admin)
+
+        resp = self.client.post(
+            reverse('device_toggle_module', args=[device.pk, 'thermometer', 'disable']))
+        self.assertRedirects(resp, reverse('device_detail_page', args=[device.pk]))
+        device.refresh_from_db()
+        self.assertFalse(device.thermometer_enabled)
         mw.assert_called_once()
         mr.assert_called_once()
 
