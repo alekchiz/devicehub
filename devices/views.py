@@ -731,8 +731,13 @@ def device_stop(request, pk):
             messages.warning(request, f'⚠️ Ошибка изменения конфига: {result.stderr.strip()}')
             return redirect('device_detail_page', pk=pk)
 
-        ssh_reboot(device)
-        messages.success(request, f'✅ Сервис {device.hostname} остановлен, перезагрузка...')
+        reboot = ssh_reboot(device)
+        if reboot.returncode == 0:
+            messages.success(request, f'✅ Сервис {device.hostname} остановлен, перезагрузка...')
+        else:
+            messages.warning(
+                request, f'⚠️ Конфиг изменён, но перезагрузка не прошла: '
+                         f'{reboot.stderr.strip() or reboot.returncode}')
     except Exception as e:
         messages.error(request, f'❌ Ошибка: {e}')
     
@@ -754,8 +759,13 @@ def device_start(request, pk):
             messages.warning(request, f'⚠️ Ошибка изменения конфига: {result.stderr.strip()}')
             return redirect('device_detail_page', pk=pk)
 
-        ssh_reboot(device)
-        messages.success(request, f'✅ Сервис {device.hostname} запущен, перезагрузка...')
+        reboot = ssh_reboot(device)
+        if reboot.returncode == 0:
+            messages.success(request, f'✅ Сервис {device.hostname} запущен, перезагрузка...')
+        else:
+            messages.warning(
+                request, f'⚠️ Конфиг изменён, но перезагрузка не прошла: '
+                         f'{reboot.stderr.strip() or reboot.returncode}')
     except Exception as e:
         messages.error(request, f'❌ Ошибка: {e}')
     
@@ -889,37 +899,45 @@ def bulk_action(request):
         if not device_ids:
             messages.warning(request, 'Не выбраны киоска')
             return redirect('dashboard')
-        
+
+        if action not in ('reboot', 'stop', 'start'):
+            messages.warning(request, f'Неизвестное действие: {action}')
+            return redirect('dashboard')
+
         devices = Device.objects.filter(id__in=device_ids)
         success = 0
         failed = 0
         failed_hosts = []
-        
+
         for device in devices:
             if not device.vpn_ip or device.vpn_ip in ['0', 'N/A']:
                 failed += 1
+                failed_hosts.append(device.hostname)
                 continue
-            
+
+            ok = False
             try:
                 if action == 'reboot':
-                    ssh_reboot(device)
-                elif action == 'stop':
-                    cmd = "sed -i '/^storageService\\.remoteParams\\.host/s/^/#/' /home/terminal/rtk/configuration.local.conf"
+                    ok = ssh_reboot(device).returncode == 0
+                else:
+                    if action == 'stop':
+                        cmd = "sed -i '/^storageService\\.remoteParams\\.host/s/^/#/' /home/terminal/rtk/configuration.local.conf"
+                    else:  # start
+                        cmd = "sed -i '/^#storageService\\.remoteParams\\.host/s/^#//' /home/terminal/rtk/configuration.local.conf"
                     result = ssh_execute(device, cmd)
-                    if result and result.returncode == 0:
+                    ok = bool(result and result.returncode == 0)
+                    if ok:
                         ssh_reboot(device)
-                elif action == 'start':
-                    cmd = "sed -i '/^#storageService\\.remoteParams\\.host/s/^#//' /home/terminal/rtk/configuration.local.conf"
-                    result = ssh_execute(device, cmd)
-                    if result and result.returncode == 0:
-                        ssh_reboot(device)
-                
-                success += 1
             except Exception as e:
                 logger.warning('Bulk action %s failed for %s: %s', action, device.hostname, e)
+                ok = False
+
+            if ok:
+                success += 1
+            else:
                 failed += 1
                 failed_hosts.append(device.hostname)
-        
+
         suffix = f' ({", ".join(failed_hosts[:5])})' if failed_hosts else ''
         messages.success(request, f'✅ Выполнено: {success}, ошибок: {failed}{suffix}')
     
