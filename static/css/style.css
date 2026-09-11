@@ -552,6 +552,11 @@ body {
 .metric-fill.is-good { background: var(--success); }
 .metric-fill.is-warn { background: var(--warning); }
 .metric-fill.is-bad { background: var(--danger); }
+
+/* Ресурсы на странице киоска */
+.resources { display: flex; flex-direction: column; gap: 0.65rem; margin-top: 0.25rem; }
+.resource .metric-track { height: 6px; }
+.resource .small { color: var(--text-light); }
 .metric-value { color: var(--text-light); font-size: 0.62rem; min-width: 2.2rem; text-align: right; }
 
 .med-indicators {

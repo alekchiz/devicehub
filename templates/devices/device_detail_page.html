@@ -3,7 +3,7 @@
 
 {% if messages %}
     {% for message in messages %}
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <div class="alert alert-{% if message.tags %}{{ message.tags }}{% else %}success{% endif %} alert-dismissible fade show" role="alert">
             {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -18,15 +18,23 @@
                 <span class="status-badge {% if device.in_repair %}danger{% elif device.is_online %}success{% else %}danger{% endif %}">
                     {% if device.in_repair %}Ремонт{% elif device.is_online %}Онлайн{% else %}Оффлайн{% if device.offline_duration %}, {{ device.offline_duration }}{% endif %}{% endif %}
                 </span>
+                {% if device.password_migrated %}<span class="ns-badge" style="background:#1f9d55;color:#fff;" title="SSH-пароль стандартный"><i class="bi bi-key"></i></span>{% endif %}
+                {% if device.vnc_ready %}<span class="ns-badge" style="background:#0ea5e9;color:#fff;" title="VNC настроен"><i class="bi bi-eye"></i></span>{% endif %}
+                {% if device.agent_deployed %}<span class="ns-badge" style="background:#d97706;color:#fff;" title="info2mqtt обновлён"><i class="bi bi-send"></i></span>{% endif %}
             </div>
             <div class="hero-facts">
                 <span>ОС: <b>{{ device.os|default:"—" }}</b></span>
                 <span>ПО: <b>{{ device.software|default:"—" }}</b></span>
                 <span>Аптайм: <b>{{ device.uptime_formatted|default:device.uptime|default:"—" }}</b></span>
                 <span>SN: <b>{{ device.sn|default:"—" }}</b></span>
+                <span>VPN: <b>{{ device.vpn_ip|default:"—" }}</b></span>
             </div>
         </div>
         <div class="hero-actions">
+            <a href="ssh://terminal@{{ device.vpn_ip }}" class="hero-btn" title="Открыть SSH"><i class="bi bi-terminal"></i> SSH</a>
+            {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
+            <a href="vnc://{{ device.vpn_ip }}:5900" class="hero-btn" title="Открыть VNC (x0vncserver, порт 5900)"><i class="bi bi-eye"></i> VNC</a>
+            {% endif %}
             <a href="{% url 'export_device_report' device.pk %}" class="hero-btn"><i class="bi bi-file-earmark-excel"></i> Сводка</a>
             <a href="{% url 'dashboard' %}" class="hero-btn"><i class="bi bi-arrow-left"></i> Дашборд</a>
         </div>
@@ -34,53 +42,70 @@
 </div>
 
 <div class="row g-4 mb-4">
-    <!-- Система -->
-    <div class="col-md-4">
+    <!-- Состояние и ресурсы -->
+    <div class="col-md-5">
         <div class="card h-100 info-card">
-            <div class="card-header"><i class="bi bi-pc-display"></i> Система</div>
+            <div class="card-header"><i class="bi bi-speedometer2"></i> Состояние и ресурсы</div>
             <div class="card-body">
-                <table class="table table-sm table-borderless kv">
-                    <tr><td class="text-muted">Hostname</td><td class="fw-bold">{{ device.hostname }}</td></tr>
-                    <tr><td class="text-muted">ОС</td><td>{{ device.os }}</td></tr>
-                    <tr><td class="text-muted">Ядро</td><td>{{ device.kernel }}</td></tr>
-                    <tr><td class="text-muted">Версия ПО</td><td>{{ device.software|default:"—" }}</td></tr>
-                    <tr><td class="text-muted">SN</td><td>{{ device.sn }}</td></tr>
-                    <tr><td class="text-muted">Аптайм</td><td>{{ device.uptime_formatted|default:device.uptime }}</td></tr>
+                <table class="table table-sm table-borderless kv mb-2">
+                    <tr><td class="text-muted">Статус</td>
+                        <td>{% if device.in_repair %}<span class="text-warning">🟡 В ремонте</span>
+                            {% elif device.is_online %}<span class="text-success">🟢 Онлайн</span>
+                            {% else %}<span class="text-danger">🔴 Оффлайн{% if device.offline_duration %}, {{ device.offline_duration }}{% endif %}</span>{% endif %}</td></tr>
                     <tr><td class="text-muted">Активность</td><td>{{ device.last_mqtt_message|date:"d.m.Y H:i:s"|default:"—" }}</td></tr>
-                    <tr>
-                        <td class="text-muted">Secure Boot</td>
-                        <td>
-                            {% if device.secureboot == 'enabled' %}
-                                <span class="text-success"><i class="bi bi-shield-check"></i> Включён</span>
-                            {% elif device.secureboot == 'disabled' %}
-                                <span class="text-danger"><i class="bi bi-shield-x"></i> Выключен</span>
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
-                    </tr>
+                    <tr><td class="text-muted">Версия ПО</td><td>{{ device.software|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">Secure Boot</td><td>
+                        {% if device.secureboot == 'enabled' %}<span class="text-success"><i class="bi bi-shield-check"></i> Включён</span>
+                        {% elif device.secureboot == 'disabled' %}<span class="text-danger"><i class="bi bi-shield-x"></i> Выключен</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td></tr>
                 </table>
+
+                {% if device.cpu_load is not None or device.memory_percent is not None or device.hdd_percent is not None %}
+                <div class="resources">
+                    {% if device.cpu_load is not None %}
+                    <div class="resource">
+                        <div class="d-flex justify-content-between small"><span>💻 CPU</span><span><b>{{ device.cpu_load|floatformat:"0" }}%</b></span></div>
+                        <div class="metric-track"><div class="metric-fill {% if device.cpu_load < 40 %}is-good{% elif device.cpu_load < 70 %}is-warn{% else %}is-bad{% endif %}" style="width:{% widthratio device.cpu_load 100 100 %}%;"></div></div>
+                    </div>
+                    {% endif %}
+                    {% if device.memory_percent is not None %}
+                    <div class="resource">
+                        <div class="d-flex justify-content-between small"><span>🧠 RAM</span><span><b>{{ device.memory_percent|floatformat:"0" }}%</b></span></div>
+                        <div class="metric-track"><div class="metric-fill {% if device.memory_percent < 70 %}is-good{% elif device.memory_percent < 85 %}is-warn{% else %}is-bad{% endif %}" style="width:{% widthratio device.memory_percent 100 100 %}%;"></div></div>
+                    </div>
+                    {% endif %}
+                    {% if device.hdd_percent is not None %}
+                    <div class="resource">
+                        <div class="d-flex justify-content-between small"><span>💾 Диск</span><span><b>{{ device.hdd_percent|floatformat:"0" }}%</b> <small class="text-muted">({{ device.hdd|floatformat:1 }}/{{ device.hdd_total|floatformat:1 }} ГБ)</small></span></div>
+                        <div class="metric-track"><div class="metric-fill {% if device.hdd_percent < 70 %}is-good{% elif device.hdd_percent < 85 %}is-warn{% else %}is-bad{% endif %}" style="width:{% widthratio device.hdd_percent 100 100 %}%;"></div></div>
+                    </div>
+                    {% endif %}
+                    {% if device.cpu_temperature or device.temperature %}
+                    <div class="resource">
+                        <div class="d-flex justify-content-between small"><span>🌡 Темп. CPU</span><span><b>{% if device.cpu_temperature %}{{ device.cpu_temperature }}{% else %}{{ device.temperature }}{% endif %}</b></span></div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Сеть -->
+    <!-- Доступ и подключение -->
     <div class="col-md-4">
         <div class="card h-100 info-card">
-            <div class="card-header"><i class="bi bi-wifi"></i> Сеть и доступ</div>
+            <div class="card-header"><i class="bi bi-wifi"></i> Доступ к киоску</div>
             <div class="card-body">
-                <table class="table table-sm table-borderless kv">
+                <table class="table table-sm table-borderless kv mb-2">
                     <tr>
-                        <td class="text-muted">VPN IP</td>
-                        <td><strong>{{ device.vpn_ip|default:"—" }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">AnyDesk</td>
+                        <td class="text-muted">SSH</td>
                         <td>
-                            {% if device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
-                                <span class="text-success">✅ {{ device.anydesk }}</span>
-                            {% else %}
-                                <span class="text-muted">❌ Не установлен</span>
+                            <a href="ssh://terminal@{{ device.vpn_ip }}" class="btn-soft btn-outline-success btn-sm">
+                                <i class="bi bi-terminal"></i> terminal@{{ device.vpn_ip }}
+                            </a>
+                            {% if device.password_migrated %}
+                            <span class="ns-badge" style="background:#1f9d55;color:#fff;" title="SSH-пароль стандартный"><i class="bi bi-key"></i></span>
                             {% endif %}
                         </td>
                     </tr>
@@ -88,242 +113,186 @@
                         <td class="text-muted">VNC (x0vncserver)</td>
                         <td>
                             {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
-                                <span class="text-success"><i class="bi bi-key"></i> {{ device.vpn_ip }}:5900</span>
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
+                            <a href="vnc://{{ device.vpn_ip }}:5900" class="btn-soft btn-outline-info btn-sm"><i class="bi bi-eye"></i> {{ device.vpn_ip }}:5900</a>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
                         </td>
                     </tr>
+                    <tr>
+                        <td class="text-muted">AnyDesk</td>
+                        <td>
+                            {% if device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
+                            <a href="anydesk:{{ device.anydesk }}" class="btn-soft btn-outline-primary btn-sm"><i class="bi bi-display"></i> {{ device.anydesk }}</a>
+                            {% else %}<span class="text-muted">❌ Не установлен</span>{% endif %}
+                        </td>
+                    </tr>
+                    <tr><td class="text-muted">Сеть</td><td>{{ device.network_speed|default:"—" }} · {{ device.kernel|default:"—" }}</td></tr>
                 </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Ресурсы -->
-    <div class="col-md-4">
-        <div class="card h-100 info-card">
-            <div class="card-header"><i class="bi bi-speedometer2"></i> Ресурсы</div>
-            <div class="card-body">
-                <table class="table table-sm table-borderless kv">
-                    <tr><td class="text-muted">CPU</td><td>{% if device.cpu_load %}{{ device.cpu_load }}%{% else %}—{% endif %}</td></tr>
-                    <tr><td class="text-muted">RAM</td><td>{% if device.memory_percent %}{{ device.memory_percent }}%{% else %}—{% endif %}</td></tr>
-                    <tr><td class="text-muted">Диск</td><td>{% if device.hdd_percent %}{{ device.hdd_percent }}% ({{ device.hdd|floatformat:1 }}/{{ device.hdd_total|floatformat:1 }} ГБ){% else %}—{% endif %}</td></tr>
-                    <tr><td class="text-muted">Температура CPU</td>
-                        <td>{% if device.cpu_temperature %}{{ device.cpu_temperature }}{% else %}{{ device.temperature|default:"—" }}{% endif %}</td></tr>
-                    <tr><td class="text-muted">Всего осмотров</td>
-                        <td>{% if daily_total is not None %}{{ daily_total }}{% elif device.exam_count is not None %}{{ device.exam_count }}{% else %}—{% endif %}</td></tr>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Управление -->
-{% if user.profile.role == 'admin' and device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
-<div class="row g-4 mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-gear"></i> Управление</div>
-            <div class="card-body">
-                <a href="ssh://terminal@{{ device.vpn_ip }}" class="btn btn-outline-success btn-sm me-2">
-                    <i class="bi bi-terminal"></i> SSH
-                </a>
-                {% if device.password_migrated %}
-                <span class="ns-badge" style="background:#1f9d55;color:#fff;vertical-align:middle;"
-                      title="SSH-пароль стандартный (Pochta@medQaZ)"><i class="bi bi-key"></i></span>
-                {% endif %}
-                {% if device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
-                <a href="anydesk:{{ device.anydesk }}" class="btn btn-outline-primary btn-sm me-2">
-                    <i class="bi bi-display"></i> AnyDesk
-                </a>
-                {% endif %}
-                <a href="vnc://{{ device.vpn_ip }}:5900" class="btn btn-outline-info btn-sm me-2"
-                   title="Открыть в VNC Viewer (x0vncserver, порт 5900)">
-                    <i class="bi bi-eye"></i> VNC (x0vncserver)
-                </a>
-                <span class="ns-badge" style="vertical-align:middle;" title="VNC порт 5900"><i class="bi bi-key"></i> 5900</span>
-                <form method="post" action="{% url 'device_vnc_setup' device.pk %}" class="d-inline-block me-2"
-                      onsubmit="return confirm('Настроить VNC (x0vncserver) на {{ device.hostname }}?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-info btn-sm"><i class="bi bi-gear"></i> Настроить VNC</button>
-                </form>
-                {% if device.vnc_ready %}
-                <span class="ns-badge" style="background:#1f9d55;color:#fff;vertical-align:middle;"
-                      title="VNC настроен (x0vncserver, порт 5900)"><i class="bi bi-key"></i> VNC ✓</span>
-                {% else %}
-                <span class="ns-badge" style="vertical-align:middle;" title="VNC ещё не настроен"><i class="bi bi-key"></i></span>
-                {% endif %}
-                <form method="post" action="{% url 'device_deploy_agent' device.pk %}" class="d-inline-block me-2"
-                      onsubmit="return confirm('Закинуть обновлённый info2mqtt.py на {{ device.hostname }}?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-send"></i> Обновить info2mqtt</button>
-                </form>
-                {% if device.agent_deployed %}
-                <span class="ns-badge" style="background:#1f9d55;color:#fff;vertical-align:middle;"
-                      title="info2mqtt.py обновлён на киоске"><i class="bi bi-check-circle"></i> агент ✓</span>
-                {% endif %}
-                <a href="{% url 'device_reboot' device.pk %}" class="btn btn-outline-danger btn-sm me-2"
-                   onclick="return confirm('Перезагрузить {{ device.hostname }}?')">
-                    <i class="bi bi-power"></i> Reboot
-                </a>
-                <a href="{% url 'device_stop' device.pk %}" class="btn btn-outline-warning btn-sm me-2"
-                   onclick="return confirm('Остановить сервис на {{ device.hostname }}?')">
-                    <i class="bi bi-stop-circle"></i> Стоп
-                </a>
-                <a href="{% url 'device_start' device.pk %}" class="btn btn-outline-primary btn-sm"
-                   onclick="return confirm('Запустить сервис на {{ device.hostname }}?')">
-                    <i class="bi bi-play-circle"></i> Старт
-                </a>
-            </div>
-            <div class="card-body border-top">
-                <form method="post" action="{% url 'device_upload' device.pk %}" enctype="multipart/form-data"
-                      class="d-flex align-items-center gap-2 flex-wrap">
-                    {% csrf_token %}
-                    <div>
-                        <label class="text-muted small d-block mb-1">Файл</label>
-                        <input type="file" name="file" class="form-control form-control-sm" style="max-width:260px;" required>
-                    </div>
-                    <div>
-                        <label class="text-muted small d-block mb-1">Путь на киоске</label>
-                        <input type="text" name="target_path" class="form-control form-control-sm"
-                               placeholder="/tmp/пример" style="max-width:200px;" required>
-                    </div>
-                    <button type="submit" class="btn btn-outline-primary btn-sm mt-4">
-                        <i class="bi bi-upload"></i> Загрузить
-                    </button>
-                </form>
-                <div class="text-muted small mt-2">
-                    <i class="bi bi-shield-lock"></i>
-                    SSH: {% if device.ssh_password %}свой пароль киоска{% else %}общий пароль/резервные из настроек{% endif %}
-                    <form method="post" action="{% url 'device_set_password' device.pk %}" class="d-inline-block ms-2"
-                          onsubmit="return confirm('Сменить SSH-пароль киоска {{ device.hostname }} на стандартный?')">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-key"></i> Сменить пароль на стандартный</button>
-                    </form>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    {% if user.profile.role == 'admin' and device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
+                        {% if device.vnc_ready %}<span class="ns-badge" style="background:#0ea5e9;color:#fff;">VNC ✓</span>{% endif %}
+                        {% if device.agent_deployed %}<span class="ns-badge" style="background:#d97706;color:#fff;">агент ✓</span>{% endif %}
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-</div>
-{% endif %}
 
-<div class="row g-4 mb-4">
     <!-- Оборудование -->
-    <div class="col-md-4">
-        <div class="card h-100">
+    <div class="col-md-3">
+        <div class="card h-100 info-card">
             <div class="card-header"><i class="bi bi-droplet"></i> Оборудование</div>
             <div class="card-body">
                 <table class="table table-sm table-borderless">
                     <tr>
                         <td class="text-muted"><i class="bi bi-droplet-half"></i> Алкотестер</td>
-                        <td>{{ device.alco|default:"—" }} <span class="badge-soft vs-{{ device.alco_ok|yesno:'ok,expired' }}">{{ device.alco_ok|yesno:'OK,проблема' }}</span></td>
+                        <td>
+                            <span class="badge-soft vs-{% if device.alco_enabled is False %}expired{% elif device.alco_ok %}ok{% else %}expired{% endif %}">{% if device.alco_enabled is False %}выкл{% elif device.alco_ok %}OK{% else %}проблема{% endif %}</span>
+                            <div class="text-muted small">{{ device.alco|default:"—" }}</div>
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-muted"><i class="bi bi-heart-pulse"></i> Тонометр</td>
-                        <td>{{ device.tonometer|default:"—" }} <span class="badge-soft vs-{{ device.tono_ok|yesno:'ok,expired' }}">{{ device.tono_ok|yesno:'OK,проблема' }}</span></td>
+                        <td>
+                            <span class="badge-soft vs-{% if device.tonometer_enabled is False %}expired{% elif device.tono_ok %}ok{% else %}expired{% endif %}">{% if device.tonometer_enabled is False %}выкл{% elif device.tono_ok %}OK{% else %}проблема{% endif %}</span>
+                            <div class="text-muted small">{{ device.tonometer|default:"—" }}</div>
+                        </td>
                     </tr>
                 </table>
                 {% if user.profile.role == 'admin' and module_states %}
-                <div class="mt-3 pt-2 border-top">
+                <div class="mt-2 pt-2 border-top">
                     <div class="text-muted small mb-2"><i class="bi bi-toggles"></i> Модули (device.conf)</div>
-                    <div class="d-flex flex-wrap align-items-center gap-3">
+                    <div class="d-flex flex-wrap gap-2">
                         <span class="d-inline-flex align-items-center gap-1">
                             <small class="text-muted">Алко:</small>
                             {% if module_states.alco %}
-                                <span class="text-success">✅ вкл</span>
+                                <span class="text-success">✅</span>
                                 <form method="post" action="{% url 'device_toggle_module' device.pk 'alco' 'disable' %}" class="d-inline"
-                                      onsubmit="return confirm('Выключить алкотестер на {{ device.hostname }}? Будет перезапуск.');">
-                                    {% csrf_token %}<button class="btn btn-outline-danger btn-sm">Выключить</button>
+                                      onsubmit="return confirm('Выключить алкотестер? Будет перезапуск.');">
+                                    {% csrf_token %}<button class="btn btn-outline-danger btn-sm">Выкл</button>
                                 </form>
                             {% else %}
-                                <span class="text-danger">❌ выкл</span>
+                                <span class="text-danger">❌</span>
                                 <form method="post" action="{% url 'device_toggle_module' device.pk 'alco' 'enable' %}" class="d-inline"
-                                      onsubmit="return confirm('Включить алкотестер на {{ device.hostname }}? Будет перезапуск.');">
-                                    {% csrf_token %}<button class="btn btn-outline-success btn-sm">Включить</button>
+                                      onsubmit="return confirm('Включить алкотестер? Будет перезапуск.');">
+                                    {% csrf_token %}<button class="btn btn-outline-success btn-sm">Вкл</button>
                                 </form>
                             {% endif %}
                         </span>
                         <span class="d-inline-flex align-items-center gap-1">
                             <small class="text-muted">Тоно:</small>
                             {% if module_states.tonometer %}
-                                <span class="text-success">✅ вкл</span>
+                                <span class="text-success">✅</span>
                                 <form method="post" action="{% url 'device_toggle_module' device.pk 'tonometer' 'disable' %}" class="d-inline"
-                                      onsubmit="return confirm('Выключить тонометр на {{ device.hostname }}? Будет перезапуск.');">
-                                    {% csrf_token %}<button class="btn btn-outline-danger btn-sm">Выключить</button>
+                                      onsubmit="return confirm('Выключить тонометр? Будет перезапуск.');">
+                                    {% csrf_token %}<button class="btn btn-outline-danger btn-sm">Выкл</button>
                                 </form>
                             {% else %}
-                                <span class="text-danger">❌ выкл</span>
+                                <span class="text-danger">❌</span>
                                 <form method="post" action="{% url 'device_toggle_module' device.pk 'tonometer' 'enable' %}" class="d-inline"
-                                      onsubmit="return confirm('Включить тонометр на {{ device.hostname }}? Будет перезапуск.');">
-                                    {% csrf_token %}<button class="btn btn-outline-success btn-sm">Включить</button>
+                                      onsubmit="return confirm('Включить тонометр? Будет перезапуск.');">
+                                    {% csrf_token %}<button class="btn btn-outline-success btn-sm">Вкл</button>
                                 </form>
                             {% endif %}
                         </span>
-                    </div>
-                    <div class="text-muted small mt-2">
-                        <i class="bi bi-info-circle"></i> Серверные строки и MAC тонометра не меняются.
                     </div>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
-    <!-- Владелец -->
-    <div class="col-md-4">
+</div>
+
+<!-- Управление (админ) -->
+{% if user.profile.role == 'admin' and device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-gear"></i> Управление</div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="{% url 'device_vnc_setup' device.pk %}" class="btn btn-soft btn-outline-info btn-sm" onclick="return confirm('Настроить VNC? (перезапуск)');"><i class="bi bi-gear"></i> Настроить VNC</a>
+            <a href="{% url 'device_deploy_agent' device.pk %}" class="btn btn-soft btn-outline-secondary btn-sm" onclick="return confirm('Закинуть обновлённый info2mqtt.py?');"><i class="bi bi-send"></i> Обновить info2mqtt</a>
+            <a href="{% url 'device_reboot' device.pk %}" class="btn btn-soft btn-outline-danger btn-sm" onclick="return confirm('Перезагрузить киоск?');"><i class="bi bi-power"></i> Reboot</a>
+            <a href="{% url 'device_stop' device.pk %}" class="btn btn-soft btn-outline-warning btn-sm" onclick="return confirm('Остановить сервис?');"><i class="bi bi-stop-circle"></i> Стоп</a>
+            <a href="{% url 'device_start' device.pk %}" class="btn btn-soft btn-outline-primary btn-sm" onclick="return confirm('Запустить сервис?');"><i class="bi bi-play-circle"></i> Старт</a>
+            <form method="post" action="{% url 'device_set_password' device.pk %}" class="d-inline"
+                  onsubmit="return confirm('Сменить SSH-пароль на стандартный?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-soft btn-outline-danger btn-sm"><i class="bi bi-key"></i> Сменить пароль</button>
+            </form>
+        </div>
+        <form method="post" action="{% url 'device_upload' device.pk %}" enctype="multipart/form-data"
+              class="d-flex align-items-center gap-2 flex-wrap">
+            {% csrf_token %}
+            <div>
+                <label class="text-muted small d-block mb-1">Файл</label>
+                <input type="file" name="file" class="form-control form-control-sm" style="max-width:260px;" required>
+            </div>
+            <div>
+                <label class="text-muted small d-block mb-1">Путь на киоске</label>
+                <input type="text" name="target_path" class="form-control form-control-sm" placeholder="/tmp/пример" style="max-width:200px;" required>
+            </div>
+            <button type="submit" class="btn btn-outline-primary btn-sm mt-4"><i class="bi bi-upload"></i> Загрузить</button>
+        </form>
+        <div class="text-muted small mt-2">
+            <i class="bi bi-shield-lock"></i>
+            SSH-доступ: {% if device.ssh_password %}свой пароль киоска{% else %}общий пароль/резервные из настроек{% endif %}.
+            Пароль VNC выставляется кнопкой «Настроить VNC».
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Владелец и объект -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-people"></i> Владелец и объект</span>
+        {% if daily_total is not None or device.exam_count is not None %}
+        <span class="badge bg-success">Всего осмотров: {% if daily_total is not None %}{{ daily_total }}{% else %}{{ device.exam_count }}{% endif %}</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-sm-6 col-md-3"><div class="text-muted small">Владелец</div><div class="fw-bold">{{ device.owner.name|default:"—" }}</div></div>
+            <div class="col-sm-6 col-md-3"><div class="text-muted small">Объект</div><div class="fw-bold">{{ device.client.name|default:"—" }}</div></div>
+            <div class="col-sm-6 col-md-3"><div class="text-muted small">Локация</div><div class="fw-bold">{{ device.location.name|default:"—" }}</div></div>
+            <div class="col-sm-6 col-md-3"><div class="text-muted small">Контакт</div><div class="fw-bold">{{ device.contact.name|default:"—" }}{% if device.contact.phone %}<br><small class="text-muted">{{ device.contact.phone }}</small>{% endif %}</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-people"></i> Владелец</div>
-            <div class="card-body">
-                <table class="table table-sm table-borderless">
-                    <tr><td class="text-muted">Владелец</td><td>{{ device.owner.name|default:"—" }}</td></tr>
-                    <tr><td class="text-muted">Объект</td><td>{{ device.client.name|default:"—" }}</td></tr>
-                    <tr><td class="text-muted">Локация</td><td>{{ device.location.name|default:"—" }}</td></tr>
-                    <tr><td class="text-muted">Контакт</td><td>{{ device.contact.name|default:"—" }}{% if device.contact.phone %}<br><small>{{ device.contact.phone }}</small>{% endif %}</td></tr>
-                </table>
+            <div class="card-header"><i class="bi bi-tools"></i> Последние ремонты</div>
+            <div class="card-body p-0">
+                <div class="table-responsive"><table class="table table-hover mb-0">
+                    <thead><tr><th>#</th><th>Проблема</th><th>Статус</th><th>Дата</th></tr></thead>
+                    <tbody>
+                    {% for r in repairs %}
+                        <tr><td>#{{ r.id }}</td><td>{{ r.problem|truncatechars:40 }}</td><td>{{ r.get_status_display }}</td><td class="text-muted small">{{ r.created_at|date:"d.m.Y" }}</td></tr>
+                    {% empty %}<tr><td colspan="4" class="text-muted text-center">Нет ремонтов</td></tr>{% endfor %}
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-ticket-detailed"></i> Последние заявки</div>
+            <div class="card-body p-0">
+                <div class="table-responsive"><table class="table table-hover mb-0">
+                    <thead><tr><th>#</th><th>Проблема</th><th>Статус</th><th>Дата</th></tr></thead>
+                    <tbody>
+                    {% for t in tickets %}
+                        <tr><td>#{{ t.id }}</td><td>{{ t.problem|truncatechars:40 }}</td><td>{{ t.get_status_display }}</td><td class="text-muted small">{{ t.created_at|date:"d.m.Y" }}</td></tr>
+                    {% empty %}<tr><td colspan="4" class="text-muted text-center">Нет заявок</td></tr>{% endfor %}
+                    </tbody>
+                </table></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Ремонты -->
 <div class="card mb-4">
-    <div class="card-header"><i class="bi bi-tools"></i> Последние ремонты</div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead><tr><th>#</th><th>Проблема</th><th>Описание</th><th>Статус</th><th>Дата</th></tr></thead>
-            <tbody>
-            {% for r in repairs %}
-                <tr><td>#{{ r.id }}</td><td>{{ r.problem|truncatechars:50 }}</td><td>{{ r.repair_description|default:"—"|truncatechars:50 }}</td><td>{{ r.get_status_display }}</td><td>{{ r.created_at|date:"d.m.Y" }}</td></tr>
-            {% empty %}
-                <tr><td colspan="5" class="text-muted text-center">Нет ремонтов</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        </div>
-    </div>
-</div>
-
-<!-- Заявки -->
-<div class="card mb-4">
-    <div class="card-header"><i class="bi bi-ticket-detailed"></i> Последние заявки</div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead><tr><th>#</th><th>Проблема</th><th>Статус</th><th>Создал</th><th>Дата</th></tr></thead>
-            <tbody>
-            {% for t in tickets %}
-                <tr><td>#{{ t.id }}</td><td>{{ t.problem|truncatechars:50 }}</td><td>{{ t.get_status_display }}</td><td>{{ t.created_by.username }}</td><td>{{ t.created_at|date:"d.m.Y" }}</td></tr>
-            {% empty %}
-                <tr><td colspan="5" class="text-muted text-center">Нет заявок</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        </div>
-    </div>
-</div>
-
-<!-- Отправки -->
-<div class="card">
     <div class="card-header"><i class="bi bi-box-seam"></i> Последние отправки</div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -331,17 +300,15 @@
             <thead><tr><th>#</th><th>Получатель</th><th>ТК</th><th>Статус</th><th>Дата</th></tr></thead>
             <tbody>
             {% for s in shipments %}
-                <tr><td>#{{ s.id }}</td><td>{{ s.receiver_name }}</td><td>{{ s.transport_company }}</td><td>{{ s.get_status_display }}</td><td>{{ s.created_at|date:"d.m.Y" }}</td></tr>
-            {% empty %}
-                <tr><td colspan="5" class="text-muted text-center">Нет отправок</td></tr>
-            {% endfor %}
+                <tr><td>#{{ s.id }}</td><td>{{ s.receiver_name }}</td><td>{{ s.transport_company }}</td><td>{{ s.get_status_display }}</td><td class="text-muted small">{{ s.created_at|date:"d.m.Y" }}</td></tr>
+            {% empty %}<tr><td colspan="5" class="text-muted text-center">Нет отправок</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
     </div>
 </div>
 
-<div class="card mt-4">
+<div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-shield-check"></i> Поверки оборудования</span>
         <a href="/admin/devices/verification/?device__hostname__exact={{ device.hostname }}" class="btn btn-sm btn-soft btn-outline-secondary">Все поверки</a>
@@ -354,30 +321,18 @@
             {% for v in verifications %}
                 <tr>
                     <td>{{ v.get_equipment_type_display }} <small class="text-muted">({{ v.equipment_name }})</small></td>
-                    <td>
-                        {% if v.status == 'sent' %}
-                            <span class="badge bg-warning text-dark">Отправлен</span>
-                        {% else %}
-                            <span class="badge bg-success">Поверен</span>
-                        {% endif %}
-                    </td>
+                    <td>{% if v.status == 'sent' %}<span class="badge bg-warning text-dark">Отправлен</span>{% else %}<span class="badge bg-success">Поверен</span>{% endif %}</td>
                     <td class="text-muted small">{{ v.verification_date|date:"d.m.Y"|default:"—" }}</td>
-                    <td class="small">
-                        {% if v.valid_until %}
-                            <span class="badge-soft vs-{{ v.expiry_state }}">{{ v.valid_until|date:"d.m.Y" }}</span>
-                        {% else %}<span class="text-muted">—</span>{% endif %}
-                    </td>
+                    <td class="small">{% if v.valid_until %}<span class="badge-soft vs-{{ v.expiry_state }}">{{ v.valid_until|date:"d.m.Y" }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
                 </tr>
-            {% empty %}
-                <tr><td colspan="4" class="text-muted text-center">Поверок не заведено</td></tr>
-            {% endfor %}
+            {% empty %}<tr><td colspan="4" class="text-muted text-center">Поверок не заведено</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
     </div>
 </div>
 
-<div class="card mt-4">
+<div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-clipboard-check"></i> Осмотры по дням</span>
         <a href="/admin/devices/dailyexam/?device__hostname__exact={{ device.hostname }}" class="btn btn-sm btn-soft btn-outline-secondary">Все дни</a>
@@ -395,16 +350,14 @@
                     <td class="text-muted small">{{ e.client|default:"—" }}</td>
                     <td class="text-muted small">{{ e.last_exam|date:"d.m.Y H:i"|default:"—" }}</td>
                 </tr>
-            {% empty %}
-                <tr><td colspan="5" class="text-muted text-center">Данных по осмотрам пока нет</td></tr>
-            {% endfor %}
+            {% empty %}<tr><td colspan="5" class="text-muted text-center">Данных по осмотрам пока нет</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>
     </div>
 </div>
 
-<div class="card mt-4">
+<div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-clock-history"></i> История событий</span>
         <a href="/admin/devices/deviceevent/?device__hostname__exact={{ device.hostname }}" class="btn btn-sm btn-soft btn-outline-secondary">Все события</a>
@@ -420,9 +373,7 @@
                     <td><span class="badge-soft ev-{{ ev.event }}">{{ ev.get_event_display }}</span></td>
                     <td class="text-muted small">{{ ev.message|default:"—" }}</td>
                 </tr>
-            {% empty %}
-                <tr><td colspan="3" class="text-muted text-center">Событий пока нет</td></tr>
-            {% endfor %}
+            {% empty %}<tr><td colspan="3" class="text-muted text-center">Событий пока нет</td></tr>{% endfor %}
             </tbody>
         </table>
         </div>

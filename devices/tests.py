@@ -978,3 +978,17 @@ class ToggleModuleTests(TestCase):
         self.assertRedirects(resp, reverse('device_detail_page', args=[device.pk]))
         mw.assert_called_once()
         mr.assert_called_once()
+
+
+class DeviceDetailPageTests(TestCase):
+    def test_detail_page_renders(self):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+        admin = User.objects.create_user(username='detadmin', password='p')
+        admin.profile.role = 'admin'
+        admin.profile.save()
+        device = Device.objects.create(hostname='666', vpn_ip='10.0.0.9', is_online=False)
+        self.client.force_login(admin)
+        resp = self.client.get(reverse('device_detail_page', args=[device.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, device.hostname)
