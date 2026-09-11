@@ -245,8 +245,8 @@
                 </div>
                 {% endif %}
                 <div class="med-indicators">
-                    <span class="mi {{ device.alco_ok|yesno:'ok,err' }}" title="Алкотестер: {{ device.alco_ok|yesno:'подключён,проблема' }}"><i class="bi bi-droplet-half"></i> Алко</span>
-                    <span class="mi {{ device.tono_ok|yesno:'ok,err' }}" title="Тонометр: {{ device.tono_ok|yesno:'подключён,проблема' }}"><i class="bi bi-heart-pulse"></i> Тоно</span>
+                    <span class="mi {% if device.alco_enabled is False %}off{% elif device.alco_ok %}ok{% else %}err{% endif %}" title="Алкотестер: {% if device.alco_enabled is False %}выключен{% elif device.alco_ok %}подключён{% else %}проблема{% endif %}"><i class="bi {% if device.alco_enabled is False %}bi-power{% elif device.alco_ok %}bi-droplet-half{% else %}bi-droplet{% endif %}"></i> Алко</span>
+                    <span class="mi {% if device.tonometer_enabled is False %}off{% elif device.tono_ok %}ok{% else %}err{% endif %}" title="Тонометр: {% if device.tonometer_enabled is False %}выключен{% elif device.tono_ok %}подключён{% else %}проблема{% endif %}"><i class="bi {% if device.tonometer_enabled is False %}bi-power{% elif device.tono_ok %}bi-heart-pulse{% else %}bi-heart{% endif %}"></i> Тоно</span>
                 </div>
                 {% with latest_day=today_exams|get_item:device.pk %}
                 <div class="meta dc-exams"><i class="bi bi-clipboard-check"></i> Осмотров сегодня: {% if latest_day is not None %}{{ latest_day }}{% else %}0{% endif %}</div>

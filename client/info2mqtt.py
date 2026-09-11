@@ -377,6 +377,23 @@ def get_tonometer_status():
         return "❌"
 
 
+def get_module_enabled(key):
+    """Включён ли модуль по device.conf: строки нет или она закомментирована = включён."""
+    conf = "/home/terminal/rtk/device.conf"
+    try:
+        if not os.path.exists(conf):
+            return True
+        with open(conf, "r", encoding="utf-8", errors="ignore") as f:
+            for raw in f:
+                stripped = raw.strip()
+                body = stripped.lstrip("#").strip()
+                if body == key or body.startswith(key + " "):
+                    return stripped.startswith("#")
+    except Exception:
+        return None
+    return True
+
+
 def get_kernel_version():
     return get_terminal_output("uname -r") or "unknown"
 
@@ -463,7 +480,9 @@ def main():
         "kernel": get_kernel_version(),
         "x11vnc": get_x11vnc_status(),
         "alco": get_alco_status(),
+        "alco_enabled": get_module_enabled("dingo.params.enabled"),
         "tonometer": get_tonometer_status(),
+        "tonometer_enabled": get_module_enabled("andble.params.enabled"),
         "software": get_software_version(),
         "network_speed": get_network_speed(),
         "uptime": get_uptime_seconds(),

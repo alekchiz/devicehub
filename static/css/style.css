@@ -568,6 +568,7 @@ body {
 .med-indicators .mi i { font-size: 0.6rem; }
 .med-indicators .mi.ok { background: var(--badge-online-bg); color: var(--badge-online-color); }
 .med-indicators .mi.err { background: var(--badge-offline-bg); color: var(--badge-offline-color); }
+.med-indicators .mi.off { background: var(--badge-light-bg); color: #94a3b8; text-decoration: line-through; }
 .med-indicators .mi-exams {
     display: inline-flex; align-items: center; gap: 0.25rem;
     margin-left: auto; font-size: 0.66rem; font-weight: 600;

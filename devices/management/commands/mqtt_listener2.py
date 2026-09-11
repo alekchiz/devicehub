@@ -69,6 +69,8 @@ def on_message(client, userdata, msg):
             'x11vnc': safe_str(payload.get('x11vnc', '')),
             'alco': safe_str(payload.get('alco', '')),
             'tonometer': safe_str(payload.get('tonometer', '')),
+            'alco_enabled': payload.get('alco_enabled'),
+            'tonometer_enabled': payload.get('tonometer_enabled'),
             'software': safe_str(payload.get('software', '')),
             'network_speed': safe_str(payload.get('network_speed', '')),
             'uptime': safe_str(payload.get('uptime', '')),

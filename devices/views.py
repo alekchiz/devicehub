@@ -813,6 +813,8 @@ def device_toggle_module(request, pk, module, action):
         return redirect('device_detail_page', pk=pk)
 
     if _write_device_conf(device, new_conf):
+        field = 'alco_enabled' if module == 'alco' else 'tonometer_enabled'
+        Device.objects.filter(pk=device.pk).update(**{field: (action == 'enable')})
         ssh_reboot(device)
         messages.success(request, f'{device.hostname}: {label} {verb}, киоск перезапускается')
     else:
