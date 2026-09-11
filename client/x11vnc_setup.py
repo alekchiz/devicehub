@@ -102,8 +102,11 @@ def generate_password():
 
 def stop_existing():
     """Гасит старые экземпляры x11vnc (свои), не трогая другие VNC-сервисы."""
-    run(["pkill", "-f", "x11vnc"])
-    time.sleep(2)
+    run(["systemctl", "stop", "x11vnc.service"])
+    # Точное имя бинарника (не -f по подстроке cmdline), чтобы не задеть соседние
+    # процессы/другие сервисы, в аргументах которых встречается "x11vnc".
+    run(["pkill", "-x", "x11vnc"])
+    time.sleep(1)
 
 
 def main():

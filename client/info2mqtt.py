@@ -103,7 +103,8 @@ def pub(topic, client_id, payload):
                 port=SERVER_PORT,
                 auth={"username": MQTT_USER, "password": MQTT_PASS},
                 protocol=MQTT_PROTOCOL,
-                qos=0,
+                qos=1,
+                retain=True,
                 keepalive=10,
             )
             return True
@@ -404,7 +405,10 @@ def get_hostname():
 
 def get_default_iface():
     iface = get_terminal_output("ip route | awk '/default/ {print $5; exit}'")
-    return iface or "eth0"
+    # Валидируем имя интерфейса перед подстановкой в shell-команду (см. ниже).
+    if not re.match(r"^[A-Za-z0-9_.\-]+$", iface or ""):
+        return "eth0"
+    return iface
 
 
 def get_network_speed():

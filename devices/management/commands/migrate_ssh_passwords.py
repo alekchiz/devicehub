@@ -26,6 +26,10 @@ class Command(BaseCommand):
                             help='Пропустить первые N киосков по номеру')
         parser.add_argument('--hostname', default='',
                             help='Обработать только один киоск по номеру')
+        parser.add_argument('--dry-run', action='store_true',
+                            help='Только показать список, ничего не менять')
+        parser.add_argument('--yes', action='store_true',
+                            help='Подтвердить массовую смену паролей без запроса')
 
     def handle(self, *args, **options):
         limit = options['limit']
@@ -45,16 +49,26 @@ class Command(BaseCommand):
         devices = list(qs)
 
         self.stdout.write(f'Обработать киосков: {len(devices)}')
+
+        is_mass = not single and (len(devices) > 1 or limit == 0)
+        if not options['dry_run'] and is_mass and not options['yes']:
+            self.stdout.write(self.style.ERROR(
+                'Массовая смена паролей требует --yes (или укажите --hostname).'))
+            return
+
         done = fail = 0
         skipped = 0
         for d in devices:
             if d.password_migrated:
                 skipped += 1
                 continue
+            if options['dry_run']:
+                self.stdout.write(f'  {d.hostname:>10}  {d.vpn_ip:<16}  [будет сменён]')
+                continue
             ok, msg = ssh_change_password(d, TARGET)
             if ok:
                 Device.objects.filter(pk=d.pk).update(
-                    ssh_password=TARGET, password_migrated=True)
+                    ssh_password=TARGET)
                 done += 1
                 self.stdout.write(f'OK   {d.hostname} ({d.vpn_ip})')
             else:
