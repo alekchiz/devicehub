@@ -1,3 +1,5 @@
+import re
+
 from django.db import models
 
 class Owner(models.Model):
@@ -36,6 +38,7 @@ class Contact(models.Model):
 
 class Device(models.Model):
     hostname = models.CharField(max_length=100, unique=True, verbose_name="Hostname")
+    is_standard = models.BooleanField(default=True, verbose_name="Стандартный киоск")
     vpn_ip = models.CharField(max_length=50, null=True, blank=True, verbose_name="VPN IP")
     kernel = models.CharField(max_length=50, blank=True)
     x11vnc = models.CharField(max_length=50, blank=True)
@@ -110,6 +113,12 @@ class Device(models.Model):
     def tono_ok(self):
         """Тонометр исправен и подключён."""
         return self._device_ok(self.tonometer)
+
+    def save(self, *args, **kwargs):
+        # Стандартный киоск = числовой hostname из 3+ цифр. Держим флаг точным
+        # на любом пути создания/изменения, чтобы им заменить regex-фильтры.
+        self.is_standard = bool(re.fullmatch(r'\d{3,}', self.hostname or ''))
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.hostname

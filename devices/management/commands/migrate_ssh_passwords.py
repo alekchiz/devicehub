@@ -36,7 +36,7 @@ class Command(BaseCommand):
         offset = options['offset']
         single = options['hostname'].strip()
 
-        qs = (Device.objects.filter(hostname__regex=r'^\d{3,}$')
+        qs = (Device.objects.filter(is_standard=True)
               .exclude(vpn_ip__in=[None, '', '0', 'N/A'])
               .order_by('hostname'))
         if single:

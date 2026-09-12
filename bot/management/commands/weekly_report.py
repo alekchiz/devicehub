@@ -13,7 +13,7 @@ class Command(BaseCommand):
         week_ago = timezone.now() - timedelta(days=7)
 
         # Киоски в ремонте вынесены из сводки (как в daily_report).
-        scope = Device.objects.filter(hostname__regex=r'^\d{3,}$', in_repair=False)
+        scope = Device.objects.filter(is_standard=True, in_repair=False)
         total = scope.count()
         online = scope.filter(is_online=True).count()
         offline = total - online

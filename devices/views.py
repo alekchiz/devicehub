@@ -466,8 +466,6 @@ def dashboard(request):
     device_list = list(
         devices.order_by('hostname').select_related('owner', 'client', 'location')
     )
-    for d in device_list:
-        d.is_standard = bool(re.fullmatch(r'\d{3,}', d.hostname or ''))
 
     if problems_filter:
         device_list = [d for d in device_list if _is_problem(d)]
@@ -955,7 +953,7 @@ def export_devices_excel(request):
                'Контакт', 'Версия ПО', 'Алкотестер', 'Тонометр', 'Скорость сети',
                'Ядро', 'Uptime', 'HDD свободно', 'HDD всего', 'HDD %', 'ОС', 'SN', 'Онлайн', 'В ремонте']
     ws.append(headers)
-    for d in Device.objects.filter(hostname__regex=r'^\d{3,}$').select_related('owner', 'location', 'client', 'contact'):
+    for d in Device.objects.filter(is_standard=True).select_related('owner', 'location', 'client', 'contact'):
         ws.append([
             d.hostname, d.vpn_ip, d.anydesk,
             d.owner.name if d.owner else '',
@@ -977,7 +975,7 @@ def export_devices_history(request):
     ws.append(headers)
     
     row = 2
-    for d in Device.objects.filter(hostname__regex=r'^\d{3,}$').order_by('-created_at'):
+    for d in Device.objects.filter(is_standard=True).order_by('-created_at'):
         ws.cell(row=row, column=1, value=d.hostname)
         ws.cell(row=row, column=2, value=d.vpn_ip or '')
         ws.cell(row=row, column=3, value=d.anydesk or '')
@@ -1016,7 +1014,7 @@ def export_devices_stats(request):
     ws1.append(headers)
     
     today = date.today()
-    devices = Device.objects.filter(hostname__regex=r'^\d{3,}$')
+    devices = Device.objects.filter(is_standard=True)
     
     for i in range(90):
         day = today - timedelta(days=i)
@@ -1130,7 +1128,7 @@ def export_repairs_report(request):
 
 @login_required
 def export_alco_report(request):
-    devices = Device.objects.filter(hostname__regex=r'^\d{3,}$')
+    devices = Device.objects.filter(is_standard=True)
     
     wb, ws = new_workbook("Алкотестеры")
     headers = ['Киоск', 'VPN IP', 'AnyDesk', 'Статус алкотестера', 'Статус Киоска']
@@ -1148,7 +1146,7 @@ def export_alco_report(request):
 
 @login_required
 def export_tonometer_report(request):
-    devices = Device.objects.filter(hostname__regex=r'^\d{3,}$')
+    devices = Device.objects.filter(is_standard=True)
     
     wb, ws = new_workbook("Тонометры")
     headers = ['Киоск', 'VPN IP', 'AnyDesk', 'Статус тонометра', 'Статус Киоска']
@@ -1284,7 +1282,7 @@ def export_verifications_excel(request):
 @login_required
 def export_med_devices_report(request):
     """Отчёт по киоскам: состояние средств измерений (алко/тоно/термо)."""
-    devices = Device.objects.filter(hostname__regex=r'^\d{3,}$').order_by('hostname')
+    devices = Device.objects.filter(is_standard=True).order_by('hostname')
     wb, ws = new_workbook("Мед.средства")
     headers = ['Киоск', 'Алкотестер', 'Тонометр', 'Средства в порядке', 'Онлайн', 'Последнее обновление']
     ws.append(headers)

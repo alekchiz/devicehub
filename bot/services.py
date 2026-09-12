@@ -95,7 +95,7 @@ def get_menu_stats_sync():
     """Счётчики для шапки главного меню бота."""
     from devices.models import Device
     from tickets.models import Ticket
-    base = Device.objects.filter(hostname__regex=r'^\d{3,}$')
+    base = Device.objects.filter(is_standard=True)
     return {
         'online': base.filter(is_online=True, in_repair=False).count(),
         'offline': base.filter(is_online=False, in_repair=False).count(),
@@ -114,7 +114,7 @@ def get_fleet_stats_sync():
     from devices.models import DailyExam, Device, Verification
     from tickets.models import Ticket
 
-    base = Device.objects.filter(hostname__regex=r'^\d{3,}$')
+    base = Device.objects.filter(is_standard=True)
     today = timezone.localdate()
     soon_until = today + timedelta(days=30)
     agg = DailyExam.objects.filter(date=today).aggregate(
