@@ -1,6 +1,7 @@
 """Единый стиль сообщений и клавиатур бота МедКиоск."""
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram import KeyboardButton, ReplyKeyboardMarkup
+from html import escape
 
 DIV = '<code>────────────────────────────</code>'
 DIV_T = '<code>────────────────────────────────</code>'
@@ -22,6 +23,7 @@ def panel(title, body='', footer=''):
 def kv(label, value):
     if value is None or value == '':
         value = '—'
+    value = escape(str(value))
     return f"{label} <b>{value}</b>"
 
 
@@ -45,8 +47,9 @@ def bar(pct):
 def device_status(data):
     """Стильная карточка статуса ПАК."""
     d = data
+    host = escape(str(d['hostname']))
     lines = [
-        f"🖥 <b>Киоск {d['hostname']}</b> · {status_badge(d['is_online'], d['in_repair'], d['offline_duration'])}",
+        f"🖥 <b>Киоск {host}</b> · {status_badge(d['is_online'], d['in_repair'], d['offline_duration'])}",
         DIV_T,
     ]
     loc = d.get('client') or d.get('location')
@@ -95,11 +98,11 @@ def device_status(data):
         lines.append(DIV)
         lines.append('📋 <b>Последние заявки:</b>')
         for t in d['tickets'][:3]:
-            lines.append(f"  #{t.id} {TICKET_EMOJI.get(t.status, '❓')} · {t.problem[:40]}")
+            lines.append(f"  #{t.id} {TICKET_EMOJI.get(t.status, '❓')} · {escape(str(t.problem))[:40]}")
     if d.get('repairs'):
         lines.append('🔧 <b>Последние ремонты:</b>')
         for r in d['repairs'][:3]:
-            lines.append(f"  #{r.id} {REPAIR_EMOJI.get(r.status, '❓')} · {r.problem[:40]}")
+            lines.append(f"  #{r.id} {REPAIR_EMOJI.get(r.status, '❓')} · {escape(str(r.problem))[:40]}")
 
     return '\n'.join(lines)
 

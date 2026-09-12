@@ -10,6 +10,7 @@ from bot.services import (
 from devices.models import Device, Repair
 from tickets.models import Ticket
 from django.utils import timezone
+from html import escape
 
 TICKET_PAK = 1
 TICKET_PROBLEM = 2
@@ -31,6 +32,9 @@ STATUS_EMOJI = {
 }
 
 def format_ticket_message(ticket):
+    def esc(v):
+        return escape(str(v)) if v not in (None, '') else '—'
+
     emoji = STATUS_EMOJI.get(ticket.status, '❓')
     now = timezone.now()
 
@@ -50,11 +54,11 @@ def format_ticket_message(ticket):
     return (
         f"{emoji} <b>Заявка #{ticket.id}</b>\n"
         f"<code>──────────────────────────────</code>\n"
-        f"📦 <b>Киоск:</b> {ticket.device.hostname}\n"
-        f"📝 <b>Описание:</b> {ticket.problem}\n"
-        f"👤 <b>Контакт:</b> {ticket.contact_name}\n"
-        f"📞 <b>Телефон:</b> {ticket.contact_phone}\n"
-        f"👨‍🔧 <b>Тех. специалист:</b> {ticket.assigned_to.username if ticket.assigned_to else 'Не назначен'}\n"
+        f"📦 <b>Киоск:</b> {esc(ticket.device.hostname)}\n"
+        f"📝 <b>Описание:</b> {esc(ticket.problem)}\n"
+        f"👤 <b>Контакт:</b> {esc(ticket.contact_name)}\n"
+        f"📞 <b>Телефон:</b> {esc(ticket.contact_phone)}\n"
+        f"👨‍🔧 <b>Тех. специалист:</b> {esc(ticket.assigned_to.username if ticket.assigned_to else None)}\n"
         f"🔄 <b>Статус:</b> {emoji} {ticket.get_status_display()}\n"
         f"📅 <b>Создана:</b> {ticket.created_at.strftime('%d.%m.%Y %H:%M') if ticket.created_at else '—'} МСК\n"
         f"⏱️ <b>В работе:</b> {work_time}"
