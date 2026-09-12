@@ -102,11 +102,12 @@ def _ssh_args(login_pwd, vpn_ip, remote, connect_timeout):
 def _ssh_auth_failed(result):
     """Признак ошибки аутентификации самого SSH-подключения."""
     err = (result.stderr or '').lower()
-    return result.returncode == 5 or (
-        'permission denied' in err or
-        'authentication' in err or
-        'denied.' in err
-    )
+    # Не опираемся на код 5: ssh передаёт наверх и код завершения удалённой
+    # команды (например, systemctl падает с 5), что маскировало бы реальную
+    # ошибку под "неверный пароль". Полагаемся на маркеры в stderr.
+    return ('permission denied' in err or
+            'authentication' in err or
+            'denied.' in err)
 
 
 def _sudo_auth_failed(result):
@@ -305,9 +306,9 @@ def _ssh_vnc_setup(device, vnc_password):
                   "chown terminal:terminal \"$passfile\"\n"
                   "chmod 600 \"$passfile\"\n"
                   "mv -f \"$passfile\" /home/terminal/.vnc/passwd\n"
-                  "if systemctl list-unit-files x0vncserver.service >/dev/null 2>&1; then\n"
+                  "if systemctl cat x0vncserver.service >/dev/null 2>&1; then\n"
                   "  systemctl restart x0vncserver.service\n"
-                  "elif systemctl list-unit-files x11vnc.service >/dev/null 2>&1; then\n"
+                  "elif systemctl cat x11vnc.service >/dev/null 2>&1; then\n"
                   "  systemctl restart x11vnc.service\n"
                   "elif command -v x11vnc >/dev/null 2>&1; then\n"
                   "  printf '%s' '__UNIT_B64__' | base64 -d > /etc/systemd/system/x11vnc.service\n"

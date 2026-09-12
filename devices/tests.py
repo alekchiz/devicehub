@@ -747,6 +747,20 @@ class SshHelperTests(TestCase):
         self.assertEqual(m.call_count, 1)
 
     @patch('devices.views.subprocess.run')
+    def test_remote_command_exit_5_not_mistaken_for_bad_password(self, m):
+        # systemctl restart несуществующего юнита падает с кодом 5 и текстом
+        # "Unit ... not found." — это НЕ ошибка пароля, ошибку нельзя скрывать.
+        m.return_value = SimpleNamespace(
+            returncode=5, stdout='',
+            stderr='Failed to restart x0vncserver.service: '
+                   'Unit x0vncserver.service not found.')
+        from devices.views import ssh_execute
+        res = ssh_execute(self.device, 'systemctl restart x0vncserver.service')
+        self.assertEqual(res.returncode, 5)
+        self.assertNotIn('не удалось подключиться', (res.stderr or ''))
+        self.assertIn('not found', res.stderr)
+
+    @patch('devices.views.subprocess.run')
     def test_falls_back_to_global_password(self, m):
         self.device.ssh_password = 'wrong-pass'
         self.device.save()
@@ -929,7 +943,7 @@ class VncSshSetupTests(TestCase):
             script = base64.b64decode(hit.group(1)).decode('utf-8')
             self.assertIn('x0vncserver.service', script)
             self.assertIn('x11vnc.service', script)
-            self.assertIn('systemctl list-unit-files', script)
+            self.assertIn('systemctl cat', script)
             self.assertIn('vncpasswd -f', script)
             self.assertIn('x11vnc -storepasswd', script)
             self.assertIn('/etc/systemd/system/x11vnc.service', script)
