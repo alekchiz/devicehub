@@ -157,10 +157,14 @@ CACHES = {
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = os.getenv('DJANGO_SESSION_COOKIE_SAMESITE', 'Lax')
-SESSION_COOKIE_SECURE = os.getenv('DJANGO_SESSION_COOKIE_SECURE', 'False') == 'True'
-CSRF_COOKIE_SECURE = os.getenv('DJANGO_CSRF_COOKIE_SECURE', 'False') == 'True'
-# HSTS включается явно (нужен корректный TLS перед nginx); по умолчанию выключено.
-SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_HSTS_SECONDS', '0'))
+# В проде (TLS перед nginx) по умолчанию включаем secure-cookie и HSTS;
+# в разработке — off, чтобы не ломать локальный http. Переопределяется env.
+_secure_default = 'True' if not DEBUG else 'False'
+SESSION_COOKIE_SECURE = os.getenv('DJANGO_SESSION_COOKIE_SECURE', _secure_default) == 'True'
+CSRF_COOKIE_SECURE = os.getenv('DJANGO_CSRF_COOKIE_SECURE', _secure_default) == 'True'
+SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_HSTS_SECONDS', '31536000' if not DEBUG else '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = (
+    os.getenv('DJANGO_HSTS_INCLUDE_SUBDOMAINS', 'True' if not DEBUG else 'False') == 'True')
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'

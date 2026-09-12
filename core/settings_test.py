@@ -19,3 +19,9 @@ CACHES = {
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
+
+# Тестовый Django-клиент ходит по http: выключаем secure-cookie/HSTS из прода,
+# иначе сессия не «липнет» при login/force_login.
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SECURE_HSTS_SECONDS = 0
