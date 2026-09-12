@@ -5,7 +5,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render
 from django.utils import timezone
 
-from .analytics import device_uptime
+from .analytics import devices_uptime
 from .models import Device, Location
 
 
@@ -20,10 +20,11 @@ def analytics_view(request):
     start = end - timedelta(days=days)
     total_seconds = (end - start).total_seconds()
 
-    devices = Device.objects.filter(hostname__regex=r'^\d{3,}$').order_by('hostname')
+    devices = Device.objects.filter(is_standard=True).order_by('hostname')
+    fractions = devices_uptime([d.pk for d in devices], start, end)
     rows = []
     for d in devices:
-        fraction = device_uptime(d, start, end)
+        fraction = fractions.get(d.pk, 0.0)
         rows.append({
             'device': d,
             'pct': round(fraction * 100, 1),
