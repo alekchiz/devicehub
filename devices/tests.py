@@ -697,7 +697,7 @@ class ExamIngestTests(TestCase):
         count = ingest_day_snapshot(payload, 'pak/day/2026-09-05')
         self.assertEqual(count, 1)
         self.device.refresh_from_db()
-        self.assertIsNone(self.device.exam_count)
+        self.assertEqual(self.device.exam_count, 12)  # последняя дата осмотров
         self.assertIsNotNone(self.device.client)
         self.assertEqual(self.device.client.name, 'РТК - ДВ')
         self.assertEqual(self.device.location.name, 'с. Хороль, ул. Ленинская, 50 б')
@@ -711,7 +711,7 @@ class ExamIngestTests(TestCase):
         count = ingest_day_snapshot(payload)
         self.assertEqual(count, 1)
         dev = Device.objects.get(hostname='99999')
-        self.assertIsNone(dev.exam_count)
+        self.assertEqual(dev.exam_count, 7)  # последняя дата осмотров
         self.assertEqual(dev.daily_exams.get().exams, 7)
 
     def test_ingest_ignores_bad_payload(self):

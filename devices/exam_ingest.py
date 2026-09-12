@@ -95,6 +95,13 @@ def ingest_day_snapshot(payload, topic_date=None):
                 defaults=defaults,
             )
 
+            # exam_count = осмотры последней даты киоска (того же дня).
+            if 'exams' in defaults:
+                latest = device.daily_exams.order_by('-date').values_list('date', flat=True).first()
+                if latest is not None and latest == day and device.exam_count != defaults['exams']:
+                    device.exam_count = defaults['exams']
+                    Device.objects.filter(pk=device.pk).update(exam_count=defaults['exams'])
+
             update_fields = []
             if client_name:
                 client, _ = Client.objects.get_or_create(name=client_name)
