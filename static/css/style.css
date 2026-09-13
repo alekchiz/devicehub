@@ -857,3 +857,224 @@ body {
     margin: 1px;
     display: inline-block;
 }
+
+/* ==========================================================================
+   NEON / FUTURISTIC MED — оверрайд темы (светлая + тёмная)
+   Классы не тронуты, меняются палитра, стекло и неоновые свечения.
+   ========================================================================== */
+
+:root {
+    --primary: #0ea5e9;
+    --primary-dark: #0369a1;
+    --primary-violet: #8b5cf6;
+    --accent-cyan: #22d3ee;
+    --accent-pink: #f472b6;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #f43f5e;
+
+    --bg: #eef4ff;
+    --card-bg: rgba(255, 255, 255, 0.72);
+    --text: #0f172a;
+    --text-light: #64748b;
+    --border: rgba(2, 132, 199, 0.16);
+    --navbar-bg: linear-gradient(120deg, #020617 0%, #0c1a3a 55%, #1e1b4b 100%);
+    --dropdown-bg: #0b1020;
+    --dropdown-border: rgba(34, 211, 238, 0.28);
+    --dropdown-text: #c7e6ff;
+    --table-header: rgba(224, 242, 254, 0.6);
+    --modal-header: rgba(224, 242, 254, 0.6);
+    --badge-light-bg: rgba(14, 165, 233, 0.1);
+    --badge-light-text: #0c4a6e;
+    --input-bg: rgba(255, 255, 255, 0.8);
+    --shadow: 0 8px 24px rgba(2, 132, 199, 0.08);
+    --card-shadow: 0 6px 20px rgba(2, 132, 199, 0.1);
+    --card-hover-shadow: 0 16px 40px rgba(139, 92, 246, 0.2);
+    --card-radius: 18px;
+
+    --vpn-bg: rgba(224, 242, 254, 0.6);
+    --vpn-color: #0369a1;
+    --meta-color: #94a3b8;
+
+    --stat-total-bg: linear-gradient(135deg, #cffafe, #ede9fe);
+    --stat-total-color: #0e7490;
+    --stat-online-bg: linear-gradient(135deg, #d1fae5, #cffafe);
+    --stat-online-color: #059669;
+    --stat-offline-bg: linear-gradient(135deg, #ffe4e6, #fef3c7);
+    --stat-offline-color: #e11d48;
+
+    --badge-online-bg: rgba(16, 185, 129, 0.14);
+    --badge-online-color: #059669;
+    --badge-offline-bg: rgba(244, 63, 94, 0.14);
+    --badge-offline-color: #e11d48;
+    --badge-repair-bg: rgba(245, 158, 11, 0.16);
+    --badge-repair-color: #b45309;
+}
+
+[data-theme="dark"] {
+    --bg: #05070f;
+    --card-bg: rgba(12, 19, 38, 0.72);
+    --text: #e2e8f0;
+    --text-light: #94a3b8;
+    --border: rgba(34, 211, 238, 0.18);
+    --navbar-bg: linear-gradient(120deg, #020617 0%, #0c1a3a 55%, #1e1b4b 100%);
+    --dropdown-bg: #0b1020;
+    --dropdown-border: rgba(34, 211, 238, 0.28);
+    --dropdown-text: #c7e6ff;
+    --table-header: rgba(30, 45, 80, 0.5);
+    --modal-header: rgba(30, 45, 80, 0.5);
+    --badge-light-bg: rgba(34, 211, 238, 0.12);
+    --badge-light-text: #a5f3fc;
+    --input-bg: rgba(9, 14, 30, 0.7);
+    --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    --card-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    --card-hover-shadow: 0 18px 48px rgba(139, 92, 246, 0.35);
+
+    --vpn-bg: rgba(14, 116, 144, 0.25);
+    --vpn-color: #7dd3fc;
+    --meta-color: #64748b;
+
+    --stat-total-bg: linear-gradient(135deg, #164e63, #312e81);
+    --stat-total-color: #67e8f9;
+    --stat-online-bg: linear-gradient(135deg, #065f46, #0e7490);
+    --stat-online-color: #6ee7b7;
+    --stat-offline-bg: linear-gradient(135deg, #881337, #7c2d12);
+    --stat-offline-color: #fda4af;
+
+    --badge-online-bg: rgba(16, 185, 129, 0.18);
+    --badge-online-color: #6ee7b7;
+    --badge-offline-bg: rgba(244, 63, 94, 0.18);
+    --badge-offline-color: #fda4af;
+    --badge-repair-bg: rgba(245, 158, 11, 0.2);
+    --badge-repair-color: #fcd34d;
+}
+
+/* --- Фон с неоновыми бликами --- */
+body {
+    background-attachment: fixed;
+}
+body, [data-theme="dark"] body {
+    background-image:
+        radial-gradient(1100px 520px at 12% -8%, rgba(34, 211, 238, 0.16), transparent 60%),
+        radial-gradient(1000px 500px at 110% 6%, rgba(139, 92, 246, 0.18), transparent 60%),
+        radial-gradient(900px 600px at 50% 120%, rgba(244, 114, 182, 0.10), transparent 55%);
+}
+[data-theme="light"] {
+    background-image:
+        radial-gradient(1000px 480px at 12% -6%, rgba(34, 211, 238, 0.14), transparent 60%),
+        radial-gradient(920px 460px at 108% 4%, rgba(139, 92, 246, 0.14), transparent 60%);
+}
+
+/* --- Навбар: стекло + переливающийся неон --- */
+.navbar {
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(34, 211, 238, 0.25);
+    background: var(--navbar-bg);
+    background-size: 220% 220%;
+    animation: neonFlow 16s ease-in-out infinite;
+}
+@keyframes neonFlow {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.navbar-brand .brand-badge {
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6, #f472b6);
+    background-size: 200% 200%;
+    animation: neonFlow 6s ease infinite;
+    box-shadow: 0 0 18px rgba(139, 92, 246, 0.7);
+    color: #04121a;
+}
+.theme-toggle { color: #67e8f9; box-shadow: 0 0 10px rgba(34,211,238,.4); border: 1px solid rgba(34,211,238,.4); }
+
+/* --- Карточки: стекло + неоновая кромка --- */
+.card, .stat-card, .device-card, .report-card, .filter-card, .trip-card, .info-card {
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+}
+.device-card, .stat-card, .filter-card {
+    position: relative;
+    overflow: hidden;
+}
+.device-card::after, .stat-card::after, .filter-card::after {
+    content: ''; position: absolute; inset: 0 0 auto 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--primary-violet), var(--accent-pink), transparent);
+    opacity: 0; transition: opacity .3s;
+}
+.device-card:hover::after, .stat-card:hover::after, .filter-card:hover::after { opacity: 1; }
+
+.device-card.online  { --status-glow: rgba(16, 185, 129, 0.5); box-shadow: 0 0 18px rgba(16,185,129,.2), var(--card-shadow); }
+.device-card.offline { --status-glow: rgba(244, 63, 94, 0.5); box-shadow: 0 0 18px rgba(244,63,94,.18), var(--card-shadow); }
+.device-card.repair  { --status-glow: rgba(245, 158, 11, 0.5); box-shadow: 0 0 18px rgba(245,158,11,.18), var(--card-shadow); }
+.device-card:hover { transform: translateY(-3px); box-shadow: 0 0 28px var(--status-glow), var(--card-hover-shadow); }
+.device-card.online::before  { background: linear-gradient(180deg, #34d399, #22d3ee); box-shadow: 0 0 12px #34d399; }
+.device-card.offline::before { background: linear-gradient(180deg, #fb7185, #f43f5e); box-shadow: 0 0 12px #fb7185; }
+.device-card.repair::before  { background: linear-gradient(180deg, #fbbf24, #f59e0b); box-shadow: 0 0 12px #fbbf24; }
+.device-card .hostname { font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace; letter-spacing: .3px; }
+.device-card:hover .hostname { text-shadow: 0 0 12px rgba(34,211,238,.6); }
+
+.status-pill, .status-chip { backdrop-filter: blur(6px); box-shadow: 0 0 12px rgba(34,211,238,.12); }
+
+.badge-soft.online, .badge-soft.ev-online, .badge-soft.vs-ok,
+.med-indicators .mi.ok { box-shadow: 0 0 10px rgba(16,185,129,.25); }
+.badge-soft.offline, .badge-soft.ev-offline, .badge-soft.vs-expired,
+.med-indicators .mi.err { box-shadow: 0 0 10px rgba(244,63,94,.22); }
+.badge-soft.repair, .badge-soft.ev-repair_in, .badge-soft.ev-repair_out, .badge-soft.vs-soon,
+.med-indicators .mi.off { box-shadow: 0 0 10px rgba(245,158,11,.2); }
+
+/* --- Кнопки: неон --- */
+.btn-primary { background: linear-gradient(135deg, #0ea5e9, #8b5cf6); border: none; background-size: 180% 180%; animation: neonFlow 8s ease infinite; box-shadow: 0 4px 16px rgba(14,165,233,.4); }
+.btn-primary:hover { box-shadow: 0 6px 24px rgba(139,92,246,.55); transform: translateY(-1px); }
+.btn-soft:hover { box-shadow: 0 4px 16px rgba(34,211,238,.35); }
+.hero-btn { border-color: rgba(103,232,249,.55) !important; box-shadow: 0 0 12px rgba(34,211,238,.35); }
+.hero-btn:hover { background: rgba(103,232,249,.18) !important; box-shadow: 0 0 20px rgba(34,211,238,.6); }
+
+/* --- Инпут-фокус --- */
+.form-control:focus, .form-select:focus { border-color: var(--accent-cyan); box-shadow: 0 0 0 4px rgba(34,211,238,.2), 0 0 14px rgba(34,211,238,.25); }
+
+/* --- Детальная страница: неоновый hero --- */
+.detail-hero {
+    background: linear-gradient(120deg, #0c1938 0%, #1e1b4b 45%, #0e7490 100%);
+    background-size: 200% 200%;
+    animation: neonFlow 14s ease-in-out infinite;
+    box-shadow: 0 10px 34px rgba(139,92,246,.4);
+    border: 1px solid rgba(103,232,249,.25);
+}
+.detail-hero::after {
+    width: 340px; height: 340px; right: -80px; top: -120px;
+    background: radial-gradient(circle, rgba(139,92,246,.45), rgba(34,211,238,.15) 45%, transparent 70%);
+    filter: blur(2px);
+}
+.detail-hero .status-badge { box-shadow: 0 0 12px rgba(103,232,249,.4); }
+.info-card .card-header { border-left-color: var(--accent-cyan); }
+
+/* --- Заголовки и индикаторы --- */
+.page-head { border-left: 4px solid var(--accent-cyan); }
+.page-head.accent-warn { border-left-color: var(--warning); }
+.page-head.accent-repair { border-left-color: var(--danger); }
+.page-head h1 i { filter: drop-shadow(0 0 8px rgba(34,211,238,.7)); }
+.live-dot { box-shadow: 0 0 12px currentColor; }
+.stat-value { font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace; text-shadow: 0 0 14px rgba(34,211,238,.4); }
+.metric-value { font-family: 'JetBrains Mono', monospace; }
+
+.wc-fill { background: linear-gradient(180deg, #67e8f9, #8b5cf6); box-shadow: 0 0 14px rgba(139,92,246,.55); }
+.dist-online { box-shadow: 0 0 12px rgba(16,185,129,.6); }
+.dist-offline { box-shadow: 0 0 12px rgba(244,63,94,.6); }
+.metric-fill.is-good { box-shadow: 0 0 8px rgba(16,185,129,.6); }
+.metric-fill.is-warn  { box-shadow: 0 0 8px rgba(245,158,11,.6); }
+.metric-fill.is-bad   { box-shadow: 0 0 8px rgba(244,63,94,.6); }
+
+/* --- Таблицы --- */
+.table thead { background: linear-gradient(180deg, rgba(34,211,238,.06), transparent); }
+
+/* --- Активные фичи-тумблеры на странице киоска --- */
+.d-section-title .ico { box-shadow: 0 0 12px rgba(34,211,238,.35); }
+
+/* --- Скроллбар --- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #0ea5e9, #8b5cf6); border-radius: 99px; }
+
+@media (max-width: 575.98px) {
+    body { background-size: 120% 120%; }
+}
