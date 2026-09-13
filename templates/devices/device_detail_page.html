@@ -216,6 +216,9 @@
         <div class="pt-2 border-top">
             <div class="section-title mb-2">Действия</div>
             <div class="d-flex flex-wrap gap-2">
+                <form method="post" action="{% url 'device_full_setup' device.pk %}" class="d-inline" onsubmit="return confirm('Полная настройка: сменить пароль + info2mqtt + VNC? Это займёт некоторое время.');">
+                    {% csrf_token %}<button type="submit" class="btn btn-soft btn-primary btn-sm"><i class="bi bi-stars"></i> Полная настройка</button>
+                </form>
                 <form method="post" action="{% url 'device_vnc_setup' device.pk %}" class="d-inline" onsubmit="return confirm('Настроить VNC (x0vncserver или x11vnc) на киоске? (будет перезапуск)');">
                     {% csrf_token %}<button type="submit" class="btn btn-soft btn-outline-info btn-sm"><i class="bi bi-gear"></i> Настроить VNC</button>
                 </form>

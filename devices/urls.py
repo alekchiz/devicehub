@@ -18,6 +18,7 @@ urlpatterns = [
     path('device/<int:pk>/set-password/', views.device_set_password, name='device_set_password'),
     path('device/<int:pk>/vnc-setup/', views.device_vnc_setup, name='device_vnc_setup'),
     path('device/<int:pk>/deploy-agent/', views.device_deploy_agent, name='device_deploy_agent'),
+    path('device/<int:pk>/full-setup/', views.device_full_setup, name='device_full_setup'),
     path('device/<int:pk>/toggle-module/<str:module>/<str:action>/', views.device_toggle_module, name='device_toggle_module'),
     path('device/<int:pk>/report/', views.export_device_report, name='export_device_report'),
     path('export/', views.export_devices_excel, name='export_devices'),

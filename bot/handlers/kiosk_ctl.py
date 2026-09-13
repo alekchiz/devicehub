@@ -30,6 +30,7 @@ TOOL_MOD_TONO = 'tst_module_tono'
 TOOL_MOD_THERMO = 'tst_module_thermo'
 TOOL_MOD_PREFIX = 'tst_mod_'  # tst_mod_<mod>_on / _off
 TOOL_CHECK = 'tst_check'
+TOOL_FULL = 'tst_full'
 
 _LABEL = {'alco': 'алкотестер', 'tonometer': 'тонометр', 'thermometer': 'термометр'}
 
@@ -174,6 +175,15 @@ def _exec_module_states(device):
     return f"{online}\n" + '\n'.join(lines)
 
 
+async def _run_full(device):
+    """Комплекс: сменить пароль -> info2mqtt -> VNC, отчёт по шагам."""
+    steps = []
+    steps.append('🔑 Пароль: ' + await _exec_pw(device))
+    steps.append('📡 info2mqtt: ' + await _exec_agent(device))
+    steps.append('👁 VNC: ' + await _exec_vnc(device))
+    return '\n'.join(steps)
+
+
 # ---------- вью меню и клавиатуры ----------
 
 def tools_markup():
@@ -181,6 +191,7 @@ def tools_markup():
         [InlineKeyboardButton('⚡ Reboot', callback_data=TOOL_REBOOT),
          InlineKeyboardButton('⏹ Стоп', callback_data=TOOL_STOP),
          InlineKeyboardButton('▶️ Старт', callback_data=TOOL_START)],
+        [InlineKeyboardButton('⚙️ Полная настройка', callback_data=TOOL_FULL)],
         [InlineKeyboardButton('🔑 Сменить пароль', callback_data=TOOL_PW),
          InlineKeyboardButton('👁 VNC', callback_data=TOOL_VNC)],
         [InlineKeyboardButton('📡 info2mqtt', callback_data=TOOL_AGENT),
@@ -345,6 +356,7 @@ async def tools_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Разрушительные действия — просим подтверждение
     confirm_map = {
         TOOL_REBOOT: ('reboot', 'Перезагрузить киоск'),
+        TOOL_FULL: ('full', 'Полная настройка: сменить пароль + info2mqtt + VNC'),
         TOOL_STOP: ('stop', 'Остановить сервис (перезапуск)'),
         TOOL_START: ('start', 'Запустить сервис (перезапуск)'),
         TOOL_PW: ('pw', 'Сменить SSH-пароль на стандартный'),
@@ -364,6 +376,8 @@ async def _run_pending(device, pending):
     """Выполняет отложенное после подтверждения действие."""
     if pending == 'reboot':
         return '⚡ Reboot: ' + await _exec_reboot(device)
+    if pending == 'full':
+        return '⚙️ <b>Полная настройка</b>:\n' + await _run_full(device)
     if pending == 'stop':
         return '⏹ Стоп: ' + await _exec_stop_start(device, 'stop')
     if pending == 'start':
