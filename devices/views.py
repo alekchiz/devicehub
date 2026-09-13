@@ -445,6 +445,7 @@ def dashboard(request):
 
     problems_filter = request.GET.get('problems') == '1'
     sort_mode = request.GET.get('sort', 'number')
+    active_filters = bool(query or status_filter or problems_filter or sort_mode != 'number')
 
     device_list = list(
         devices.order_by('hostname').select_related('owner', 'client', 'location')

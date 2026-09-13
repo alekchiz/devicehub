@@ -157,7 +157,7 @@
                 <a href="{{ status_chips.repair }}" class="status-chip {% if status_filter == 'repair' %}active{% endif %}">
                     <span class="c-dot repair"></span>В ремонте
                 </a>
-                <a href="{{ problems_chip }}" class="status-chip {% if problems_filter %}active{% endif %}">
+                <a href="{% if problems_filter %}{{ problems_off_chip }}{% else %}{{ problems_chip }}{% endif %}" class="status-chip {% if problems_filter %}active{% endif %}">
                     <span class="c-dot problems"></span>Проблемные
                 </a>
             </div>

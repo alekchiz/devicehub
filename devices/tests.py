@@ -623,6 +623,17 @@ class DashboardNonstandardTests(TestCase):
         resp = self.client.get(reverse('dashboard'))
         self.assertContains(resp, 'title="Пароль обновлён"')
 
+    def test_problems_filter_can_be_reset(self):
+        self.client.force_login(_technician())
+        # Без фильтров кнопки «Сбросить» нет.
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, 'Сбросить')
+        # При active «Проблемные» кнопка «Сбросить» есть, а чип ведёт на снятие фильтра.
+        resp2 = self.client.get(f'{reverse("dashboard")}?problems=1')
+        self.assertEqual(resp2.status_code, 200)
+        self.assertContains(resp2, 'Сбросить')
+
 
 class AdminPagesTests(TestCase):
     def setUp(self):
