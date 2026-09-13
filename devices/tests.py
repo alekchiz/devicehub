@@ -797,12 +797,6 @@ class SshHelperTests(TestCase):
         res = ssh_reboot(self.device)
         self.assertEqual(res.returncode, 0)
 
-    def test_upload_requires_admin(self):
-        self.client.force_login(_technician())
-        resp = self.client.post(reverse('device_upload', args=[self.device.pk]))
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn('/accounts/login/', resp.url)
-
     @patch('devices.views.subprocess.run')
     def test_change_password_uses_working_password_and_sets_new(self, m):
         self.device.ssh_password = 'old-device-pass'

@@ -202,24 +202,6 @@ def _scp_put(device, local_path, remote_path):
     return False, 'Не удалось подключиться (проверьте SSH-пароль киоска)'
 
 
-@login_required
-def upload_file_to_device(device, uploaded_file, target_path):
-    """Копирует загруженный файл на киоск по SCP (первый рабочий пароль)."""
-    import os as _os
-    import tempfile
-
-    tmp = None
-    try:
-        with tempfile.NamedTemporaryFile(delete=False) as tf:
-            for chunk in uploaded_file.chunks():
-                tf.write(chunk)
-            tmp = tf.name
-        return _scp_put(device, tmp, target_path)
-    finally:
-        if tmp and _os.path.exists(tmp):
-            _os.remove(tmp)
-
-
 def ssh_change_password(device, new_password):
     """Меняет пароль пользователя terminal на киоске через sudo chpasswd.
 
@@ -776,27 +758,6 @@ def device_start(request, pk):
     except Exception as e:
         messages.error(request, f'❌ Ошибка: {e}')
     
-    return redirect('device_detail_page', pk=pk)
-
-@user_passes_test(is_admin)
-def device_upload(request, pk):
-    """Загрузка файла на киоск по SCP."""
-    device = get_object_or_404(Device, pk=pk)
-    if request.method == 'POST':
-        uploaded = request.FILES.get('file')
-        target = (request.POST.get('target_path') or '').strip()
-        if not uploaded:
-            messages.error(request, 'Выберите файл для загрузки')
-        elif not target:
-            messages.error(request, 'Укажите путь назначения на киоске (например /tmp/файл)')
-        elif not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
-            messages.error(request, f'Нет VPN IP у {device.hostname}')
-        else:
-            ok, msg = upload_file_to_device(device, uploaded, target)
-            if ok:
-                messages.success(request, f'{device.hostname}: {msg}')
-            else:
-                messages.error(request, f'{device.hostname}: {msg}')
     return redirect('device_detail_page', pk=pk)
 
 @user_passes_test(is_admin)

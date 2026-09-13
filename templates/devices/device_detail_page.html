@@ -136,60 +136,74 @@
 <!-- Управление и доступ (админ), свёрнуто -->
 {% if user.profile.role == 'admin' %}
 <details class="card mb-3" {% if not device.is_online %}open{% endif %}>
-    <summary class="card-header list-unstyled mb-0" style="cursor:pointer;">
-        <i class="bi bi-gear"></i> Управление и доступ
+    <summary class="card-header list-unstyled mb-0 d-flex align-items-center gap-2" style="cursor:pointer;">
+        <i class="bi bi-gear-wide-connected"></i>
+        <span class="fw-semibold">Управление и доступ</span>
         {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
-        {% if device.vnc_ready %}<span class="ns-badge" style="background:#0ea5e9;color:#fff;">VNC ✓</span>{% endif %}
-        {% if device.agent_deployed %}<span class="ns-badge" style="background:#d97706;color:#fff;">агент ✓</span>{% endif %}
+        {% if device.vnc_ready %}<span class="ns-badge" style="margin-left:.25rem;"><i class="bi bi-eye"></i> VNC</span>{% endif %}
+        {% if device.agent_deployed %}<span class="ns-badge" style="margin-left:.25rem;"><i class="bi bi-send"></i> агент</span>{% endif %}
         {% endif %}
+        <span class="ms-auto text-muted small"><i class="bi bi-chevron-down"></i></span>
     </summary>
-    <div class="card-body">
+    <div class="card-body d-flex flex-column gap-3">
         {% if device.vpn_ip and device.vpn_ip != '0' and device.vpn_ip != 'N/A' %}
-        <div class="d-flex flex-wrap gap-2 mb-3">
-            <a href="ssh://terminal@{{ device.vpn_ip }}" class="btn btn-soft btn-outline-success btn-sm"><i class="bi bi-terminal"></i> terminal@{{ device.vpn_ip }}</a>
-            <a href="vnc://{{ device.vpn_ip }}:5900" class="btn btn-soft btn-outline-info btn-sm"><i class="bi bi-eye"></i> VNC :5900</a>
-            {% if device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
-            <a href="anydesk:{{ device.anydesk }}" class="btn btn-soft btn-outline-primary btn-sm"><i class="bi bi-display"></i> AnyDesk {{ device.anydesk }}</a>
-            {% endif %}
-            {% if device.password_migrated %}<span class="ns-badge" style="background:#1f9d55;color:#fff;"><i class="bi bi-key"></i> пароль стандартный</span>{% endif %}
+        <div>
+            <div class="section-title mb-2">Доступ</div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="ssh://terminal@{{ device.vpn_ip }}" class="btn btn-soft btn-outline-success btn-sm"><i class="bi bi-terminal"></i> terminal@{{ device.vpn_ip }}</a>
+                <a href="vnc://{{ device.vpn_ip }}:5900" class="btn btn-soft btn-outline-info btn-sm"><i class="bi bi-eye"></i> VNC :5900</a>
+                {% if device.anydesk and device.anydesk != '0' and device.anydesk != 'N/A' and device.anydesk != 'not_installed' %}
+                <a href="anydesk:{{ device.anydesk }}" class="btn btn-soft btn-outline-primary btn-sm"><i class="bi bi-display"></i> AnyDesk {{ device.anydesk }}</a>
+                {% endif %}
+                {% if device.password_migrated %}<span class="ns-badge" style="background:#1f9d55;color:#fff;margin-left:.25rem;"><i class="bi bi-key"></i> пароль стандартный</span>{% endif %}
+            </div>
         </div>
         {% endif %}
 
         {% if module_states %}
-        <div class="mb-3 pb-2 border-bottom">
-            <div class="text-muted small mb-2"><i class="bi bi-toggles"></i> Модули (device.conf)</div>
+        <div class="pt-2 border-top">
+            <div class="section-title mb-2">Модули (device.conf)</div>
             <div class="d-flex flex-wrap gap-3">
                 <span class="d-inline-flex align-items-center gap-2">
-                    <small class="text-muted">Алко:</small>
-                    {% if module_states.alco %}<span class="text-success">✅</span>
+                    <i class="bi bi-droplet-half"></i>
+                    <span class="small fw-semibold">Алко:</span>
+                    {% if module_states.alco %}
+                        <span class="text-success small">вкл</span>
                         <form method="post" action="{% url 'device_toggle_module' device.pk 'alco' 'disable' %}" class="d-inline" onsubmit="return confirm('Выключить алкотестер? Будет перезапуск.');">
                             {% csrf_token %}<button class="btn btn-outline-danger btn-sm">Выкл</button>
                         </form>
-                    {% else %}<span class="text-danger">❌</span>
+                    {% else %}
+                        <span class="text-danger small">выкл</span>
                         <form method="post" action="{% url 'device_toggle_module' device.pk 'alco' 'enable' %}" class="d-inline" onsubmit="return confirm('Включить алкотестер? Будет перезапуск.');">
                             {% csrf_token %}<button class="btn btn-outline-success btn-sm">Вкл</button>
                         </form>
                     {% endif %}
                 </span>
                 <span class="d-inline-flex align-items-center gap-2">
-                    <small class="text-muted">Тоно:</small>
-                    {% if module_states.tonometer %}<span class="text-success">✅</span>
+                    <i class="bi bi-heart-pulse"></i>
+                    <span class="small fw-semibold">Тоно:</span>
+                    {% if module_states.tonometer %}
+                        <span class="text-success small">вкл</span>
                         <form method="post" action="{% url 'device_toggle_module' device.pk 'tonometer' 'disable' %}" class="d-inline" onsubmit="return confirm('Выключить тонометр? Будет перезапуск.');">
                             {% csrf_token %}<button class="btn btn-outline-danger btn-sm">Выкл</button>
                         </form>
-                    {% else %}<span class="text-danger">❌</span>
+                    {% else %}
+                        <span class="text-danger small">выкл</span>
                         <form method="post" action="{% url 'device_toggle_module' device.pk 'tonometer' 'enable' %}" class="d-inline" onsubmit="return confirm('Включить тонометр? Будет перезапуск.');">
                             {% csrf_token %}<button class="btn btn-outline-success btn-sm">Вкл</button>
                         </form>
                     {% endif %}
                 </span>
                 <span class="d-inline-flex align-items-center gap-2">
-                    <small class="text-muted">Термо:</small>
-                    {% if module_states.thermometer %}<span class="text-success">✅</span>
+                    <i class="bi bi-thermometer-half"></i>
+                    <span class="small fw-semibold">Термо:</span>
+                    {% if module_states.thermometer %}
+                        <span class="text-success small">вкл</span>
                         <form method="post" action="{% url 'device_toggle_module' device.pk 'thermometer' 'disable' %}" class="d-inline" onsubmit="return confirm('Выключить термометр? Будет перезапуск.');">
                             {% csrf_token %}<button class="btn btn-outline-danger btn-sm">Выкл</button>
                         </form>
-                    {% else %}<span class="text-danger">❌</span>
+                    {% else %}
+                        <span class="text-danger small">выкл</span>
                         <form method="post" action="{% url 'device_toggle_module' device.pk 'thermometer' 'enable' %}" class="d-inline" onsubmit="return confirm('Включить термометр? Будет перезапуск.');">
                             {% csrf_token %}<button class="btn btn-outline-success btn-sm">Вкл</button>
                         </form>
@@ -199,37 +213,27 @@
         </div>
         {% endif %}
 
-        <div class="d-flex flex-wrap gap-2 mb-3">
-            <form method="post" action="{% url 'device_vnc_setup' device.pk %}" class="d-inline" onsubmit="return confirm('Настроить VNC (x0vncserver или x11vnc) на киоске? (будет перезапуск)');">
-                {% csrf_token %}<button type="submit" class="btn btn-soft btn-outline-info btn-sm"><i class="bi bi-gear"></i> Настроить VNC</button>
-            </form>
-            <form method="post" action="{% url 'device_deploy_agent' device.pk %}" class="d-inline" onsubmit="return confirm('Закинуть обновлённый info2mqtt.py на киоск?');">
-                {% csrf_token %}<button type="submit" class="btn btn-soft btn-outline-secondary btn-sm"><i class="bi bi-send"></i> Обновить info2mqtt</button>
-            </form>
-            <a href="{% url 'device_reboot' device.pk %}" class="btn btn-soft btn-outline-danger btn-sm" onclick="return confirm('Перезагрузить киоск?');"><i class="bi bi-power"></i> Reboot</a>
-            <a href="{% url 'device_stop' device.pk %}" class="btn btn-soft btn-outline-warning btn-sm" onclick="return confirm('Остановить сервис?');"><i class="bi bi-stop-circle"></i> Стоп</a>
-            <a href="{% url 'device_start' device.pk %}" class="btn btn-soft btn-outline-primary btn-sm" onclick="return confirm('Запустить сервис?');"><i class="bi bi-play-circle"></i> Старт</a>
-            <form method="post" action="{% url 'device_set_password' device.pk %}" class="d-inline" onsubmit="return confirm('Сменить SSH-пароль на стандартный?');">
-                {% csrf_token %}<button type="submit" class="btn btn-soft btn-outline-danger btn-sm"><i class="bi bi-key"></i> Сменить пароль</button>
-            </form>
-        </div>
-
-        <form method="post" action="{% url 'device_upload' device.pk %}" enctype="multipart/form-data" class="d-flex align-items-end gap-2 flex-wrap">
-            {% csrf_token %}
-            <div>
-                <label class="text-muted small d-block mb-1">Файл</label>
-                <input type="file" name="file" class="form-control form-control-sm" style="max-width:260px;" required>
+        <div class="pt-2 border-top">
+            <div class="section-title mb-2">Действия</div>
+            <div class="d-flex flex-wrap gap-2">
+                <form method="post" action="{% url 'device_vnc_setup' device.pk %}" class="d-inline" onsubmit="return confirm('Настроить VNC (x0vncserver или x11vnc) на киоске? (будет перезапуск)');">
+                    {% csrf_token %}<button type="submit" class="btn btn-soft btn-outline-info btn-sm"><i class="bi bi-gear"></i> Настроить VNC</button>
+                </form>
+                <form method="post" action="{% url 'device_deploy_agent' device.pk %}" class="d-inline" onsubmit="return confirm('Закинуть обновлённый info2mqtt.py на киоск?');">
+                    {% csrf_token %}<button type="submit" class="btn btn-soft btn-outline-secondary btn-sm"><i class="bi bi-send"></i> Обновить info2mqtt</button>
+                </form>
+                <a href="{% url 'device_start' device.pk %}" class="btn btn-soft btn-outline-warning btn-sm" onclick="return confirm('Запустить сервис?');"><i class="bi bi-play-circle"></i> Старт</a>
+                <a href="{% url 'device_stop' device.pk %}" class="btn btn-soft btn-outline-warning btn-sm" onclick="return confirm('Остановить сервис?');"><i class="bi bi-stop-circle"></i> Стоп</a>
+                <a href="{% url 'device_reboot' device.pk %}" class="btn btn-soft btn-outline-danger btn-sm" onclick="return confirm('Перезагрузить киоск?');"><i class="bi bi-power"></i> Reboot</a>
+                <form method="post" action="{% url 'device_set_password' device.pk %}" class="d-inline" onsubmit="return confirm('Сменить SSH-пароль на стандартный?');">
+                    {% csrf_token %}<button type="submit" class="btn btn-soft btn-outline-danger btn-sm"><i class="bi bi-key"></i> Сменить пароль</button>
+                </form>
             </div>
-            <div>
-                <label class="text-muted small d-block mb-1">Путь на киоске</label>
-                <input type="text" name="target_path" class="form-control form-control-sm" placeholder="/tmp/пример" style="max-width:200px;" required>
+            <div class="text-muted small mt-2">
+                <i class="bi bi-shield-lock"></i>
+                SSH-доступ: {% if device.ssh_password %}свой пароль киоска{% else %}общий пароль/резервные из настроек{% endif %}.
+                Пароль VNC ставится кнопкой «Настроить VNC».
             </div>
-            <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-upload"></i> Загрузить</button>
-        </form>
-        <div class="text-muted small mt-2">
-            <i class="bi bi-shield-lock"></i>
-            SSH-доступ: {% if device.ssh_password %}свой пароль киоска{% else %}общий пароль/резервные из настроек{% endif %}.
-            Пароль VNC выставляется кнопкой «Настроить VNC».
         </div>
     </div>
 </details>
