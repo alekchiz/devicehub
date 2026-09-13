@@ -678,15 +678,16 @@ def device_detail_page(request, pk):
     daily_exams = device.daily_exams.all()[:10]
     daily_total = device.daily_exams.aggregate(total=Sum('exams'))['total']
 
-    # Состояние модулей (алко/тонометр) — «вживую» из device.conf, только для админа на онлайн-киоске.
+    # Состояние модулей берём из флагов БД (их шлёт телеметрия info2mqtt),
+    # а не «живым» SSH-чтением device.conf — то блокировало загрузку страницы
+    # на секунды для админа у онлайновых киосков. Тумблеры (POST) работают по SSH.
     module_states = None
-    if is_admin(request.user) and device.is_online and device.vpn_ip and device.vpn_ip not in ('0', 'N/A'):
-        conf = _read_device_conf(device)
-        if conf is not None:
-            module_states = {
-                mod: _module_enabled(conf, key)
-                for mod, key in getattr(settings, 'DEVICE_MODULE_TOGGLE_KEYS', {}).items()
-            }
+    if is_admin(request.user):
+        module_states = {
+            'alco': device.alco_enabled is not False,
+            'tonometer': device.tonometer_enabled is not False,
+            'thermometer': device.thermometer_enabled is not False,
+        }
 
     context = {
         'device': device,
