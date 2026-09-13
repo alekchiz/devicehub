@@ -118,7 +118,8 @@ def main_keyboard():
     rows = [
         ['🔍 Статус киоска', '📊 Статистика'],
         ['✍️ Новая заявка', '📋 Мои заявки'],
-        ['❓ Помощь', '🚑 Сервер'],
+        ['🛠 Киоск-инструменты', '🚑 Сервер'],
+        ['❓ Помощь'],
     ]
     return ReplyKeyboardMarkup(
         [[KeyboardButton(label) for label in row] for row in rows],

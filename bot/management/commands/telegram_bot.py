@@ -31,6 +31,9 @@ from bot.handlers.password import (
     password_start, password_current, password_new, password_confirm,
     CURRENT_PW, NEW_PW, CONFIRM_PW,
 )
+from bot.handlers.kiosk_ctl import (
+    tools_start, tools_hostname, tools_button, TOOLS_HOSTNAME,
+)
 from telegram import Update
 from telegram.ext import ContextTypes
 from asgiref.sync import sync_to_async
@@ -117,6 +120,8 @@ async def button_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await edit_ticket_select(update, context)
     elif data.startswith('ticket_'):
         return await ticket_detail_handler(update, context)
+    elif data.startswith('tst_'):
+        return await tools_button(update, context)
     elif data in ('search_my', 'search_all'):
         return await search_start(update, context)
     elif data == 'help':
@@ -231,6 +236,17 @@ class Command(BaseCommand):
             fallbacks=[CommandHandler('cancel', cancel)],
         )
 
+        tools_handler = ConversationHandler(
+            entry_points=[
+                CommandHandler('tools', tools_start),
+                MessageHandler(filters.Text('🛠 Киоск-инструменты'), tools_start),
+            ],
+            states={
+                TOOLS_HOSTNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, tools_hostname)],
+            },
+            fallbacks=[CommandHandler('cancel', cancel)],
+        )
+
         adduser_handler = ConversationHandler(
             entry_points=[CommandHandler('adduser', add_user_start)],
             states={
@@ -261,6 +277,7 @@ class Command(BaseCommand):
         app.add_handler(search_handler)
         app.add_handler(edit_handler)
         app.add_handler(status_handler)
+        app.add_handler(tools_handler)
         app.add_handler(adduser_handler)
         app.add_handler(password_handler)
         app.add_handler(CommandHandler('unlink', unlink_command))
@@ -276,6 +293,7 @@ class Command(BaseCommand):
                 BotCommand('status', '🔍 Статус Киоска'),
                 BotCommand('edit', '📝 Редактировать заявку'),
                 BotCommand('stats', '📊 Статистика по устройствам'),
+                BotCommand('tools', '🛠 Управление киоском (для админов)'),
                 BotCommand('register', '📝 Регистрация'),
                 BotCommand('link', '🔗 Привязать аккаунт'),
                 BotCommand('password', '🔐 Сменить пароль'),
