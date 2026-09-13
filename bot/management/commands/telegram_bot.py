@@ -5,7 +5,8 @@ from telegram import BotCommand
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.handlers.start import start, menu_command
 from bot.handlers.stats import stats_handler
-from bot.formatting import panel, main_keyboard
+from bot.formatting import panel
+from bot.nav import main_menu
 from bot.handlers.register import (register_start, register_phone, register_password,
                                    link_account, link_confirm, cancel,
                                    PHONE_WAIT, PASSWORD_WAIT, LINK_PASSWORD_WAIT)
@@ -81,7 +82,7 @@ async def help_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             '🚑 /health — состояние сервера',
         ])
     )
-    await update.message.reply_text(text, parse_mode='HTML', reply_markup=main_keyboard())
+    await update.message.reply_text(text, parse_mode='HTML', reply_markup=main_menu(False))
 
 
 async def reply_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -122,6 +123,14 @@ async def button_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await ticket_detail_handler(update, context)
     elif data.startswith('tst_'):
         return await tools_button(update, context)
+    elif data == 'menu_stats':
+        return await stats_handler(update, context)
+    elif data == 'menu_my':
+        return await my_tickets_handler(update, context)
+    elif data == 'menu_health':
+        return await health_command(update, context)
+    elif data == 'menu_help':
+        return await help_handler(update, context)
     elif data in ('search_my', 'search_all'):
         return await search_start(update, context)
     elif data == 'help':
@@ -180,6 +189,7 @@ class Command(BaseCommand):
         ticket_handler = ConversationHandler(
             entry_points=[
                 CallbackQueryHandler(ticket_create_start, pattern='^ticket_create$'),
+                CallbackQueryHandler(ticket_create_start, pattern='^menu_create$'),
                 MessageHandler(filters.Text('✍️ Новая заявка'), ticket_create_start),
             ],
             states={
@@ -228,6 +238,7 @@ class Command(BaseCommand):
         status_handler = ConversationHandler(
             entry_points=[
                 CommandHandler('status', status_start),
+                CallbackQueryHandler(status_start, pattern='^menu_status$'),
                 MessageHandler(filters.Text('🔍 Статус киоска'), status_start),
             ],
             states={
@@ -239,6 +250,7 @@ class Command(BaseCommand):
         tools_handler = ConversationHandler(
             entry_points=[
                 CommandHandler('tools', tools_start),
+                CallbackQueryHandler(tools_start, pattern='^menu_tools$'),
                 MessageHandler(filters.Text('🛠 Киоск-инструменты'), tools_start),
             ],
             states={

@@ -6,22 +6,21 @@ from .tickets_common import (
     STATUS_HOSTNAME, menu_keyboard, get_device_full, require_privileged,
 )
 from bot.formatting import panel, device_status
+from bot.nav import send
 
 
 async def status_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /status - запрос номера киоска."""
     _, denied = await require_privileged(update.effective_user.id)
     if denied:
-        await update.message.reply_text(panel('Доступ запрещён', denied))
+        await send(update, context, panel('Доступ запрещён', denied))
         return ConversationHandler.END
-    await update.message.reply_text(
+    await send(update, context,
         panel(
             'Проверка статуса',
             "Введите <b>номер киоска</b> (например: 123):\n"
             "Или /cancel для отмены"
-        ),
-        parse_mode='HTML'
-    )
+        ))
     return STATUS_HOSTNAME
 
 

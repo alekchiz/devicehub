@@ -10,6 +10,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from asgiref.sync import sync_to_async
 
 from bot.formatting import panel
+from bot.nav import send
 
 TOOLS_HOSTNAME = 40
 
@@ -180,14 +181,13 @@ def _confirm_markup():
 
 async def tools_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await _admin_profile(update.effective_user.id):
-        await update.message.reply_text(panel('Доступ запрещён', 'Только администраторы.'))
+        await send(update, context, panel('Доступ запрещён', 'Только администраторы.'))
         return ConversationHandler.END
     context.user_data.pop('tools_hostname', None)
     context.user_data.pop('tools_device_id', None)
     context.user_data.pop('tools_pending', None)
-    await update.message.reply_text(
-        '🛠 <b>Киоск-инструменты</b>\n\nВведите номер киоска (например 001):',
-        parse_mode='HTML')
+    await send(update, context,
+               '🛠 <b>Киоск-инструменты</b>\n\nВведите номер киоска (например 001):')
     return TOOLS_HOSTNAME
 
 

@@ -2,7 +2,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from asgiref.sync import sync_to_async
 from bot.services import get_profile_sync, get_menu_stats_sync
-from bot.formatting import panel, main_keyboard
+from bot.formatting import panel
+from bot.nav import main_menu, send
 from .tickets_common import require_privileged
 
 @sync_to_async
@@ -16,19 +17,19 @@ def get_menu_stats():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.effective_user.id
     profile = await get_profile(telegram_id)
-    
+
     if profile:
         await update.message.reply_text(
             f"👋 С возвращением, {profile['username']}!\n"
             f"Роль: {profile['role']}",
-            reply_markup=main_keyboard()
+            reply_markup=main_menu(profile['role_code'] == 'admin')
         )
     else:
         await update.message.reply_text(
             "👋 Добро пожаловать в МедКиоск!\n\n"
             "Для регистрации используйте /register\n"
             "Или /link для привязки аккаунта",
-            reply_markup=main_keyboard()
+            reply_markup=main_menu(False)
         )
 
 async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -58,16 +59,15 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     if update.callback_query:
-        await update.callback_query.answer()
-        await update.callback_query.edit_message_text(
-            header, parse_mode='HTML', reply_markup=main_keyboard())
+        await send(update, context, header, reply_markup=main_menu(role == 'admin'))
     else:
-        await update.message.reply_text(header, parse_mode='HTML', reply_markup=main_keyboard())
+        await update.message.reply_text(header, parse_mode='HTML',
+                                        reply_markup=main_menu(role == 'admin'))
 async def health_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /health - статистика сервера"""
     _, denied = await require_privileged(update.effective_user.id)
     if denied:
-        await update.message.reply_text(panel('Доступ запрещён', denied))
+        await send(update, context, panel('Доступ запрещён', denied))
         return
     from bot.management.commands.health_check import get_server_stats
     import urllib.request
@@ -83,4 +83,4 @@ async def health_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     )
 
-    await update.message.reply_text(message, parse_mode='HTML')
+    await send(update, context, message)

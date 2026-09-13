@@ -6,7 +6,7 @@ from .tickets_common import (
     TICKET_PAK, TICKET_PROBLEM, TICKET_NAME, TICKET_PHONE,
     format_ticket_message, menu_keyboard, get_profile, find_device, create_ticket,
 )
-from bot.formatting import panel, main_keyboard
+from bot.formatting import panel
 
 
 async def ticket_create_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -18,7 +18,7 @@ async def ticket_create_start(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer()
         await query.edit_message_text(text, parse_mode='HTML')
     else:
-        await update.message.reply_text(text, parse_mode='HTML', reply_markup=main_keyboard())
+        await update.message.reply_text(text, parse_mode='HTML')
     return TICKET_PAK
 
 
