@@ -846,6 +846,9 @@ def device_full_setup(request, pk):
         steps = []
 
         ok, msg = ssh_change_password(device, settings.DEVICE_SSH_PASSWORD)
+        if ok:
+            Device.objects.filter(pk=device.pk).update(
+                ssh_password=settings.DEVICE_SSH_PASSWORD)
         steps.append(('🔑 Пароль', ok, msg))
 
         import os as _os

@@ -90,8 +90,12 @@ def _exec_stop_start(device, mode):
 @sync_to_async
 def _exec_pw(device):
     from django.conf import settings
+    from devices.models import Device
     from devices.views import ssh_change_password
     ok, msg = ssh_change_password(device, settings.DEVICE_SSH_PASSWORD)
+    if ok:
+        Device.objects.filter(pk=device.pk).update(
+            ssh_password=settings.DEVICE_SSH_PASSWORD)
     return msg
 
 
