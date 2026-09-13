@@ -505,13 +505,15 @@ def dashboard(request):
     else:
         page_status = 'ok'
 
+    # Пустой querystring дал бы href="" (перезагрузка с фильтром) — подменяем на '?'.
+    clear_qs = build_qs(request, status='', q='', problems='', sort='')
     status_chips = {
-        'all': build_qs(request, status=''),
-        'online': build_qs(request, status='online'),
-        'offline': build_qs(request, status='offline'),
-        'repair': build_qs(request, status='repair'),
+        'all': clear_qs or '?',
+        'online': build_qs(request, status='online') or '?',
+        'offline': build_qs(request, status='offline') or '?',
+        'repair': build_qs(request, status='repair') or '?',
     }
-    reset_url = build_qs(request, status='', q='', problems='', sort='')
+    reset_url = clear_qs or '?'
 
     # Рендер всех сотен карточек разом тормозит страницу: режем по 100.
     from django.core.paginator import Paginator
@@ -553,13 +555,13 @@ def dashboard(request):
         'week_max': week_max,
         'problems_count': problems_count,
         'problems_filter': problems_filter,
-        'problems_chip': build_qs(request, problems='1'),
-        'problems_off_chip': build_qs(request, problems=''),
+        'problems_chip': build_qs(request, problems='1') or '?',
+        'problems_off_chip': build_qs(request, problems='') or '?',
         'sort_mode': sort_mode,
         'sort_chips': {
-            'number': build_qs(request, sort='number'),
-            'active': build_qs(request, sort='active'),
-            'problems': build_qs(request, sort='problems'),
+            'number': build_qs(request, sort='number') or '?',
+            'active': build_qs(request, sort='active') or '?',
+            'problems': build_qs(request, sort='problems') or '?',
         },
         'online_pct': online_pct,
         'offline_pct': offline_pct,
