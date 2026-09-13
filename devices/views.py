@@ -43,6 +43,21 @@ class _SSHFailed:
             self.stderr = message
 
 
+_SSH_NOISE = ('Warning: Permanently added', '[sudo] password')
+
+
+def _clean_ssh_msg(stderr):
+    """Убирает служебные строки ssh/sudo из stderr, оставляя суть."""
+    if not stderr:
+        return ''
+    lines = [
+        line.strip()
+        for line in stderr.splitlines()
+        if line.strip() and not any(n in line for n in _SSH_NOISE)
+    ]
+    return '\n'.join(lines)
+
+
 def _ssh_candidate_passwords(device=None):
     """Пароли для подключения: свой у киоска, глобальный, затем резервные из настроек."""
     seen, candidates = set(), []
@@ -792,8 +807,8 @@ def device_vnc_setup(request, pk):
             Device.objects.filter(pk=device.pk).update(vnc_ready=True)
             messages.success(request, f'{device.hostname}: VNC настроен (порт 5900)')
         else:
-            messages.warning(
-                request, f'{device.hostname}: {result.stderr.strip() or "ошибка настройки VNC"}')
+            err = _clean_ssh_msg(result.stderr) or 'ошибка настройки VNC'
+            messages.warning(request, f'{device.hostname}: {err}')
     return redirect('device_detail_page', pk=pk)
 
 
@@ -846,7 +861,11 @@ def device_full_setup(request, pk):
         vnc_pass = getattr(settings, 'DEVICE_VNC_PASSWORD', '') or settings.DEVICE_SSH_PASSWORD
         r = _ssh_vnc_setup(device, vnc_pass)
         ok3 = r.returncode == 0
-        steps.append(('👁 VNC', ok3, r.stderr.strip() or 'VNC настроен'))
+        if ok3:
+            vnc_msg = 'VNC настроен (порт 5900)'
+        else:
+            vnc_msg = _clean_ssh_msg(r.stderr) or f'ошибка (код {r.returncode})'
+        steps.append(('👁 VNC', ok3, vnc_msg))
         if ok3:
             Device.objects.filter(pk=device.pk).update(vnc_ready=True)
 

@@ -99,13 +99,13 @@ def _exec_pw(device):
 def _exec_vnc(device):
     from django.conf import settings
     from devices.models import Device
-    from devices.views import _ssh_vnc_setup
+    from devices.views import _ssh_vnc_setup, _clean_ssh_msg
     vnc = getattr(settings, 'DEVICE_VNC_PASSWORD', '') or settings.DEVICE_SSH_PASSWORD
     r = _ssh_vnc_setup(device, vnc)
     if r.returncode == 0:
         Device.objects.filter(pk=device.pk).update(vnc_ready=True)
         return 'VNC настроен (порт 5900)'
-    return r.stderr.strip() or 'ошибка настройки VNC'
+    return _clean_ssh_msg(r.stderr) or f'ошибка настройки VNC (код {r.returncode})'
 
 
 @sync_to_async
