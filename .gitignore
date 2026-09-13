@@ -12,6 +12,7 @@ staticfiles/
 *.log
 db.sqlite3
 backups/
+pak/
 
 # Редакторы / ОС
 .DS_Store
