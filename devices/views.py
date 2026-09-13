@@ -530,10 +530,15 @@ def dashboard(request):
     }
     reset_url = build_qs(request, status='', q='', problems='', sort='')
 
-    devices = device_list
-    page_obj = None
-    base_qs = ''
-    result_count = len(devices)
+    # Рендер всех сотен карточек разом тормозит страницу: режем по 100.
+    from django.core.paginator import Paginator
+    result_count = len(device_list)
+    paginator = Paginator(device_list, 100)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    devices = page_obj.object_list
+    # base_qs без ведущего '?': пагинация строит «?page=N{base_qs}».
+    _bq = build_qs(request)
+    base_qs = ('&' + _bq[1:]) if _bq else ''
 
     online_pct = round(shown_online / result_count * 100) if result_count else 0
     offline_pct = round(shown_offline / result_count * 100) if result_count else 0
