@@ -109,14 +109,10 @@ async def button_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
     
-    if data == 'ticket_create':
-        return await ticket_create_start(update, context)
-    elif data == 'my_tickets':
+    if data == 'my_tickets':
         return await my_tickets_handler(update, context)
     elif data == 'all_tickets':
         return await all_tickets_handler(update, context)
-    elif data == 'edit_ticket':
-        return await edit_ticket_start(update, context)
     elif data == 'edit_back':
         return await edit_back(update, context)
     elif data in ('field_problem', 'field_name', 'field_phone', 'edit_save'):
@@ -309,6 +305,7 @@ class Command(BaseCommand):
                 BotCommand('menu', '📱 Главное меню'),
                 BotCommand('status', '🔍 Статус Киоска'),
                 BotCommand('edit', '📝 Редактировать заявку'),
+                BotCommand('create', '✍️ Новая заявка'),
                 BotCommand('stats', '📊 Статистика по устройствам'),
                 BotCommand('tools', '🛠 Управление киоском (для админов)'),
                 BotCommand('register', '📝 Регистрация'),
