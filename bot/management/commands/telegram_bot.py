@@ -37,13 +37,7 @@ from bot.handlers.kiosk_ctl import (
 )
 from telegram import Update
 from telegram.ext import ContextTypes
-from asgiref.sync import sync_to_async
-from bot.services import get_profile_sync
 import asyncio
-
-@sync_to_async
-def get_profile(telegram_id):
-    return get_profile_sync(telegram_id)
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -52,16 +46,23 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             "📚 <b>МедКиоск — справка</b>\n"
             "<code>────────────────────────────</code>\n\n"
-            "🚀 /start — начало работы\n"
-            "📱 /menu — главное меню\n"
+            "🗂 <b>Меню (кнопки):</b>\n"
+            "🔍 Статус киоска · 📊 Статистика\n"
+            "✍️ Новая заявка · 📋 Мои заявки\n"
+            "🛠 Киоск-инструменты (админ)\n"
+            "🚑 Сервер · ❓ Помощь\n\n"
+            "📜 <b>Команды:</b>\n"
             "🔍 /status — статус киоска\n"
             "📊 /stats — статистика по устройствам\n"
+            "🛠 /tools — управление киоском (админ)\n"
             "🚑 /health — состояние сервера\n"
+            "📱 /menu — главное меню\n"
+            "📝 /create — новая заявка\n"
             "📝 /edit — редактировать заявку\n"
             "📝 /register — регистрация\n"
             "🔗 /link — привязать аккаунт\n"
             "🔐 /password — сменить пароль\n"
-            "➕ /adduser — добавить пользователя (право)\n"
+            "➕ /adduser — добавить пользователя (админ)\n"
             "🔗 /unlink — отвязать Telegram",
             parse_mode='HTML'
         )
@@ -71,15 +72,18 @@ async def help_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = panel(
         'МедКиоск — справка',
         '\n'.join([
-            '🚀 /start — начало работы',
-            '📱 /menu — главное меню',
-            '🔍 Кнопка «Статус киоска»',
-            '📊 Кнопка «Статистика»',
-            '✍️ Кнопка «Новая заявка»',
+            '🗂 Меню (кнопки): Статус · Статистика ·',
+            'Новая заявка · Мои заявки · Киоск-инструменты',
+            '· Сервер · Помощь',
+            '',
+            '🔍 /status — статус киоска',
+            '🛠 /tools — управление киоском (админ)',
+            '🚑 /health — состояние сервера',
+            '📝 /create — новая заявка',
+            '📝 /edit — редактировать заявку',
             '📝 /register — регистрация',
             '🔗 /link — привязать аккаунт',
             '🔐 /password — сменить пароль',
-            '🚑 /health — состояние сервера',
         ])
     )
     await update.message.reply_text(text, parse_mode='HTML', reply_markup=main_menu(False))
@@ -190,6 +194,7 @@ class Command(BaseCommand):
             entry_points=[
                 CallbackQueryHandler(ticket_create_start, pattern='^ticket_create$'),
                 CallbackQueryHandler(ticket_create_start, pattern='^menu_create$'),
+                CommandHandler('create', ticket_create_start),
                 MessageHandler(filters.Text('✍️ Новая заявка'), ticket_create_start),
             ],
             states={

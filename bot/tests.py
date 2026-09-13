@@ -119,3 +119,21 @@ class BotServicesTests(TestCase):
         stats = get_menu_stats_sync()
         for key in ('online', 'offline', 'repair', 'open'):
             self.assertIsInstance(stats[key], int)
+
+    def test_main_menu_inline_buttons(self):
+        from bot.nav import main_menu
+        all_markup = main_menu(False)
+        admin_markup = main_menu(True)
+
+        def callbacks(m):
+            out = set()
+            for row in m.inline_keyboard:
+                for btn in row:
+                    out.add(btn.callback_data)
+            return out
+
+        base = {'menu_status', 'menu_stats', 'menu_create', 'menu_my',
+                'menu_health', 'menu_help'}
+        self.assertTrue(base.issubset(callbacks(all_markup)))
+        self.assertNotIn('menu_tools', callbacks(all_markup))
+        self.assertIn('menu_tools', callbacks(admin_markup))
