@@ -137,3 +137,11 @@ class BotServicesTests(TestCase):
         self.assertTrue(base.issubset(callbacks(all_markup)))
         self.assertNotIn('menu_tools', callbacks(all_markup))
         self.assertIn('menu_tools', callbacks(admin_markup))
+
+    def test_parse_module_toggle(self):
+        from bot.handlers.kiosk_ctl import _parse_module_toggle
+        self.assertEqual(_parse_module_toggle('tst_mod_alco_off'), ('alco', 'off'))
+        self.assertEqual(_parse_module_toggle('tst_mod_thermo_on'), ('thermo', 'on'))
+        self.assertIsNone(_parse_module_toggle('tst_mod_alco'))       # мало частей
+        self.assertIsNone(_parse_module_toggle('tst_mod_alco_off_x'))  # лишняя часть
+        self.assertIsNone(_parse_module_toggle('tst_check'))

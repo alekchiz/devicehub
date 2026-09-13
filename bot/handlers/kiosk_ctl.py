@@ -29,8 +29,17 @@ TOOL_MOD_ALCO = 'tst_module_alco'
 TOOL_MOD_TONO = 'tst_module_tono'
 TOOL_MOD_THERMO = 'tst_module_thermo'
 TOOL_MOD_PREFIX = 'tst_mod_'  # tst_mod_<mod>_on / _off
+TOOL_CHECK = 'tst_check'
 
 _LABEL = {'alco': 'алкотестер', 'tonometer': 'тонометр', 'thermometer': 'термометр'}
+
+
+def _parse_module_toggle(data):
+    """Разбор callback модуля: 'tst_mod_<mod>_<on|off>' -> (mod, action)."""
+    parts = data.split('_')
+    if len(parts) == 4 and parts[0] == 'tst' and parts[1] == 'mod' and parts[3] in ('on', 'off'):
+        return parts[2], parts[3]
+    return None
 
 
 # ---------- синхронные обёртки над devices.views ----------
@@ -139,6 +148,32 @@ def _exec_module(device, module, action):
     return f'{name} {verb}, киоск перезапускается'
 
 
+@sync_to_async
+def _exec_module_states(device):
+    """Текущее состояние модулей: device.conf (живое) + флаг в БД."""
+    from django.conf import settings
+    from devices.views import _read_device_conf, _module_enabled
+    keys = getattr(settings, 'DEVICE_MODULE_TOGGLE_KEYS', {})
+    labels = {'alco': 'Алко', 'tonometer': 'Тоно', 'thermometer': 'Термо'}
+    dbflag = {
+        'alco': device.alco_enabled,
+        'tonometer': device.tonometer_enabled,
+        'thermometer': device.thermometer_enabled,
+    }
+    conf = _read_device_conf(device)
+    lines = []
+    for mod, key in keys.items():
+        if conf is not None:
+            live = 'вкл ✅' if _module_enabled(conf, key) else 'выкл ⛔'
+        else:
+            live = 'не прочитано'
+        dbv = dbflag.get(mod)
+        db = 'вкл' if dbv is not False else ('выкл' if dbv is False else '—')
+        lines.append(f"{labels.get(mod, mod)}: конфиг — {live} · БД — {db}")
+    online = '🟢 онлайн' if device.is_online else '🔴 оффлайн'
+    return f"{online}\n" + '\n'.join(lines)
+
+
 # ---------- вью меню и клавиатуры ----------
 
 def tools_markup():
@@ -153,6 +188,7 @@ def tools_markup():
         [InlineKeyboardButton('🍺 Алко', callback_data=TOOL_MOD_ALCO),
          InlineKeyboardButton('💊 Тоно', callback_data=TOOL_MOD_TONO),
          InlineKeyboardButton('🌡 Термо', callback_data=TOOL_MOD_THERMO)],
+        [InlineKeyboardButton('🔎 Состояние модулей', callback_data=TOOL_CHECK)],
         [InlineKeyboardButton('✅ Выйти', callback_data=TOOL_EXIT)],
     ])
 
@@ -275,6 +311,14 @@ async def tools_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='HTML', reply_markup=tools_markup())
         return
 
+    # Состояние модулей — безопасно, выполняем сразу
+    if data == TOOL_CHECK:
+        text = await _exec_module_states(device)
+        await query.edit_message_text(
+            panel('Состояние модулей', f"Киоск: <b>{hostname}</b>\n{text}\nВыберите действие:"),
+            parse_mode='HTML', reply_markup=tools_markup())
+        return
+
     # Подменю модулей
     if data in (TOOL_MOD_ALCO, TOOL_MOD_TONO, TOOL_MOD_THERMO):
         module = {'tst_module_alco': 'alco', 'tst_module_tono': 'tonometer',
@@ -286,7 +330,12 @@ async def tools_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Модуль on/off — просим подтверждение
     if data.startswith(TOOL_MOD_PREFIX):
-        _, module, action = data.split('_')
+        parsed = _parse_module_toggle(data)
+        if not parsed:
+            await query.edit_message_text('Неизвестная команда модуля.',
+                                          reply_markup=tools_markup())
+            return
+        module, action = parsed
         context.user_data['tools_pending'] = f'mod_{module}_{action}'
         await query.edit_message_text(
             _confirm_text(f"{_LABEL.get(module, module)}: {action == 'on' and 'включить' or 'выключить'}"),
