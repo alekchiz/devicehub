@@ -145,3 +145,18 @@ class BotServicesTests(TestCase):
         self.assertIsNone(_parse_module_toggle('tst_mod_alco'))       # мало частей
         self.assertIsNone(_parse_module_toggle('tst_mod_alco_off_x'))  # лишняя часть
         self.assertIsNone(_parse_module_toggle('tst_check'))
+
+    def test_device_status_shows_modules(self):
+        from bot.formatting import device_status
+        data = {
+            'hostname': '001', 'is_online': True, 'in_repair': False,
+            'offline_duration': None,
+            'alco_ok': True, 'tono_ok': False,
+            'alco_enabled': True, 'tonometer_enabled': False,
+            'thermometer_enabled': True,
+        }
+        out = device_status(data)
+        for name in ('Алко', 'Тоно', 'Термо'):
+            self.assertIn(name, out)
+        self.assertIn('⛔ выкл', out)       # тонометр выключен
+        self.assertIn('✅ вкл', out)        # алко и термо включены
