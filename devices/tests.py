@@ -237,16 +237,6 @@ class DeviceViewsTests(TestCase):
         self.assertContains(resp, 'Средства готовы')
         self.assertContains(resp, 'dist-bar')
         self.assertContains(resp, 'Распределение')
-        self.assertContains(resp, 'Проблемные')
-
-    def test_problems_filter(self):
-        self.client.force_login(_technician())
-        Device.objects.all().update(alco='✅', tonometer='✅', temperature='36.6', is_online=True)
-        Device.objects.create(hostname='777', is_online=False)
-        resp = self.client.get(reverse('dashboard') + '?problems=1')
-        # '777' оффлайн -> в проблемных; '123' полностью готов -> нет
-        self.assertContains(resp, '777')
-        self.assertNotContains(resp, '>123<')
 
     def test_active_sort(self):
         self.client.force_login(_technician())
@@ -623,16 +613,15 @@ class DashboardNonstandardTests(TestCase):
         resp = self.client.get(reverse('dashboard'))
         self.assertContains(resp, 'title="Пароль обновлён"')
 
-    def test_problems_filter_can_be_reset(self):
+    def test_problems_filter_removed(self):
         self.client.force_login(_technician())
-        # Без фильтров кнопки «Сбросить» нет.
         resp = self.client.get(reverse('dashboard'))
         self.assertEqual(resp.status_code, 200)
-        self.assertNotContains(resp, 'Сбросить')
-        # При active «Проблемные» кнопка «Сбросить» есть, а чип ведёт на снятие фильтра.
+        self.assertNotContains(resp, 'Проблемные')   # чип фильтра убран
+        # Параметр ?problems=1 больше не даёт «Сбросить» (фильтр удалён).
         resp2 = self.client.get(f'{reverse("dashboard")}?problems=1')
         self.assertEqual(resp2.status_code, 200)
-        self.assertContains(resp2, 'Сбросить')
+        self.assertNotContains(resp2, 'Сбросить')
 
 
 class AdminPagesTests(TestCase):

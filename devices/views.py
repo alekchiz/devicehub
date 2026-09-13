@@ -443,16 +443,12 @@ def dashboard(request):
             not dev.alco_ok or not dev.tono_ok
         )
 
-    problems_filter = request.GET.get('problems') == '1'
     sort_mode = request.GET.get('sort', 'number')
-    active_filters = bool(query or status_filter or problems_filter or sort_mode != 'number')
+    active_filters = bool(query or status_filter or sort_mode != 'number')
 
     device_list = list(
         devices.order_by('hostname').select_related('owner', 'client', 'location')
     )
-
-    if problems_filter:
-        device_list = [d for d in device_list if _is_problem(d)]
 
     if sort_mode == 'active':
         aware_min = timezone.now() - timedelta(days=3650)
@@ -554,9 +550,6 @@ def dashboard(request):
         'week_exams': week_exams,
         'week_max': week_max,
         'problems_count': problems_count,
-        'problems_filter': problems_filter,
-        'problems_chip': build_qs(request, problems='1') or '?',
-        'problems_off_chip': build_qs(request, problems='') or '?',
         'sort_mode': sort_mode,
         'sort_chips': {
             'number': build_qs(request, sort='number') or '?',

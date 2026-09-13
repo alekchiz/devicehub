@@ -157,9 +157,6 @@
                 <a href="{{ status_chips.repair }}" class="status-chip {% if status_filter == 'repair' %}active{% endif %}">
                     <span class="c-dot repair"></span>В ремонте
                 </a>
-                <a href="{% if problems_filter %}{{ problems_off_chip }}{% else %}{{ problems_chip }}{% endif %}" class="status-chip {% if problems_filter %}active{% endif %}">
-                    <span class="c-dot problems"></span>Проблемные
-                </a>
             </div>
             <div class="ms-auto d-flex align-items-center gap-2">
                 {% if search_mode %}
@@ -193,7 +190,7 @@
             · офлайн <b id="headOffline">{{ offline_count }}</b>
             {% if repair_count %}· в ремонте <b id="headRepair">{{ repair_count }}</b>{% endif %}
             {% if page_obj and page_obj.paginator.num_pages > 1 %}· стр. {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}{% endif %}
-            {% if problems_count %}<a href="{{ problems_chip }}" class="text-danger fw-bold ms-1"><i class="bi bi-exclamation-triangle"></i> {{ problems_count }}</a>{% endif %}
+            {% if problems_count %}<span class="text-danger fw-bold ms-1"><i class="bi bi-exclamation-triangle"></i> {{ problems_count }}</span>{% endif %}
         </span>
     </div>
 </div>
