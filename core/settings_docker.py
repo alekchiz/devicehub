@@ -14,8 +14,8 @@ DATABASES = {
 
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'support-pak.ru,www.support-pak.ru').split(',')
-# В Docker статику раздаёт nginx напрямую из смонтированного каталога, поэтому
-# не используем STATICFILES_DIRS (иначе будет конфликт с STATIC_ROOT).
-STATICFILES_DIRS = []
-STATIC_ROOT = '/app/static'
+# Собираем статику из исходников (static/) и отдаём собранную (staticfiles/),
+# а не сырую из исходной директории, чтобы не зависеть от host-mount.
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = '/static/'

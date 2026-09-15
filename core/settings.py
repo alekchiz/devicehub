@@ -157,6 +157,23 @@ CACHES = {
     }
 }
 
+# Логи телеметрии (mqtt_listener2) должны быть видны в `docker compose logs`.
+# По умолчанию root-логгер — WARNING, поэтому info-сообщения листенера
+# (подключение, day-снимки, ошибки разбора) подавлялись. Выводим их в console.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {'format': '{asctime} {levelname} {name} {message}', 'style': '{'},
+    },
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+    },
+    'loggers': {
+        'devices.mqtt': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+    },
+}
+
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = os.getenv('DJANGO_SESSION_COOKIE_SAMESITE', 'Lax')
 # В проде (TLS перед nginx) по умолчанию включаем secure-cookie и HSTS;

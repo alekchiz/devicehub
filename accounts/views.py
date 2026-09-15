@@ -10,8 +10,13 @@ LOGIN_WINDOW_SECONDS = 300
 
 
 def _client_ip(request: HttpRequest) -> str:
-    # nginx перезаписывает X-Real-IP реальным клиентом ($remote_addr),
-    # поэтому это надёжный источник. X-Forwarded-For клиент подделывает.
+    # Доверенный источник IP — заголовок X-Real-IP, который nginx всегда
+    # перезаписывает значением $remote_addr (см. nginx.conf: proxy_set_header
+    # X-Real-IP $remote_addr). Пока эта перезапись работает, клиент не может
+    # подделать свой IP. X-Forwarded-For сознательно НЕ используется — его
+    # клиент подделывает напрямую. Если nginx перестанет перезаписывать
+    # X-Real-IP (например, из-за смены конфига — важно не сломать это),
+    # запасной вариант: REMOTE_ADDR от обратного прокси.
     real = request.META.get('HTTP_X_REAL_IP', '')
     if real:
         return real.strip()
