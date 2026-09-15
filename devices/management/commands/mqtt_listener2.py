@@ -52,7 +52,8 @@ def on_connect(client, userdata, flags, rc):
     if rc != 0:
         logger.warning('MQTT connection refused (rc=%s)', rc)
         return
-    client.subscribe(MQTT_TOPIC)
+    for topic in [t.strip() for t in MQTT_TOPIC.split(',') if t.strip()]:
+        client.subscribe(topic)
 
 def on_message(client, userdata, msg):
     try:

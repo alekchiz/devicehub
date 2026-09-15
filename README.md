@@ -11,7 +11,7 @@
 
 ## Технологии
 
-- **Backend:** Django 5.x, PostgreSQL 16
+- **Backend:** Django 6.x, PostgreSQL 16
 - **Frontend:** Bootstrap 5.1 (локально), Bootstrap Icons, тёмная тема
 - **Бот:** python-telegram-bot
 - **Телеметрия:** MQTT (paho-mqtt)

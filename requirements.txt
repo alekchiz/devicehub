@@ -1,4 +1,4 @@
-Django>=5.0
+Django~=6.1
 paho-mqtt
 psycopg2-binary
 openpyxl
