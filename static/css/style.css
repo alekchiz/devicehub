@@ -492,6 +492,11 @@ body {
     flex-direction: column;
 }
 .device-card .device-metrics { margin-top: auto; }
+.device-card .card-actions {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-color, rgba(255,255,255,.08));
+}
 .device-card .hostname {
     font-size: 0.9rem;
     font-weight: 600;
