@@ -88,6 +88,11 @@ DATABASES = {
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
 
+# HTTP(S) прокси для исходящих вызовов Telegram API (бот + уведомления).
+# Указывается, когда api.telegram.org недоступен напрямую: например, через
+# локальный xray-клиент (VLESS): http://xray:8118 или socks5://xray:1080.
+TELEGRAM_PROXY = os.getenv('TELEGRAM_PROXY', '')
+
 # MQTT-подключение (используется management-командами)
 MQTT_BROKER = os.getenv('MQTT_BROKER', '77.239.107.241')
 MQTT_PORT = int(os.getenv('MQTT_PORT', '1883'))

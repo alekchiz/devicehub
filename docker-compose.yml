@@ -1,4 +1,27 @@
 services:
+  xray:
+    image: teddysun/xray:latest
+    restart: unless-stopped
+    environment:
+      - VLESS_SERVER=${VLESS_SERVER}
+      - VLESS_PORT=${VLESS_PORT:-443}
+      - VLESS_UUID=${VLESS_UUID}
+      - VLESS_PATH=${VLESS_PATH:-/}
+      - VLESS_SNI=${VLESS_SNI:-}
+      - VLESS_ALPN=${VLESS_ALPN:-http/1.1}
+      - VLESS_FP=${VLESS_FP:-chrome}
+      - XRAY_SOCKS_PORT=1080
+      - XRAY_HTTP_PORT=8118
+    volumes:
+      - ./xray/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["sh"]
+    command: ["/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8118/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   db:
     image: postgres:16
     environment:

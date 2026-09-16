@@ -3,9 +3,8 @@
 Получателей выбирает админ: в профиле пользователя (UserProfile) нужно включить
 "Уведомлять о падении Киоск" и/или "Уведомлять о возврате Киоск" и указать telegram_id.
 """
-import json
 import logging
-import urllib.request
+import requests
 from django.utils.html import escape
 
 from django.conf import settings
@@ -20,11 +19,14 @@ def send_telegram(telegram_id, message):
     if not token:
         return False
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    data = json.dumps({'chat_id': telegram_id, 'text': message, 'parse_mode': 'HTML'}).encode('utf-8')
-    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+    data = {'chat_id': telegram_id, 'text': message, 'parse_mode': 'HTML'}
+    proxies = None
+    proxy = getattr(settings, 'TELEGRAM_PROXY', '')
+    if proxy:
+        proxies = {'http': proxy, 'https': proxy}
     try:
-        urllib.request.urlopen(req, timeout=5)
-        return True
+        resp = requests.post(url, data=data, timeout=10, proxies=proxies)
+        return resp.ok
     except Exception as e:
         logger.error('Telegram send error: %s', e)
         return False

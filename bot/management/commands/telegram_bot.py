@@ -167,7 +167,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('❌ Укажите TELEGRAM_BOT_TOKEN в settings.py'))
             return
         
-        app = Application.builder().token(token).build()
+        builder = Application.builder().token(token)
+        proxy = getattr(settings, 'TELEGRAM_PROXY', '')
+        if proxy:
+            builder.proxy(proxy)
+        app = builder.build()
         
         reg_handler = ConversationHandler(
             entry_points=[CommandHandler('register', register_start)],

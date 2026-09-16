@@ -3,7 +3,7 @@ import json
 import re
 from datetime import timedelta
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase, TransactionTestCase, override_settings
@@ -324,31 +324,31 @@ class NotificationTests(TestCase):
         self.online_sub.profile.telegram_id = 333
         self.online_sub.profile.save()
 
-    def _sent_chat_ids(self, mock_urlopen):
+    def _sent_chat_ids(self, mock_post):
         return [
-            json.loads(call[0][0].data)['chat_id']
-            for call in mock_urlopen.call_args_list
+            call.kwargs['data']['chat_id']
+            for call in mock_post.call_args_list
         ]
 
-    @patch('devices.notifications.urllib.request.urlopen')
-    def test_offline_sent_only_to_offline_subscribers(self, mock_urlopen):
+    @patch('devices.notifications.requests.post')
+    def test_offline_sent_only_to_offline_subscribers(self, mock_post):
         from devices.notifications import notify_device_status
         notify_device_status(self.device, 'offline', 'Нет связи')
-        self.assertEqual(self._sent_chat_ids(mock_urlopen), [111])
+        self.assertEqual(self._sent_chat_ids(mock_post), [111])
 
-    @patch('devices.notifications.urllib.request.urlopen')
-    def test_online_sent_only_to_online_subscribers(self, mock_urlopen):
+    @patch('devices.notifications.requests.post')
+    def test_online_sent_only_to_online_subscribers(self, mock_post):
         from devices.notifications import notify_device_status
         notify_device_status(self.device, 'online', 'Связь есть')
-        self.assertEqual(self._sent_chat_ids(mock_urlopen), [333])
+        self.assertEqual(self._sent_chat_ids(mock_post), [333])
 
-    @patch('devices.notifications.urllib.request.urlopen', return_value='ok')
-    def test_send_telegram_returns_success(self, mock_urlopen):
+    @patch('devices.notifications.requests.post', return_value=Mock(ok=True))
+    def test_send_telegram_returns_success(self, mock_post):
         from devices.notifications import send_telegram
         self.assertTrue(send_telegram(123, 'тест'))
 
-    @patch('devices.notifications.urllib.request.urlopen', side_effect=Exception('down'))
-    def test_send_telegram_returns_failure(self, mock_urlopen):
+    @patch('devices.notifications.requests.post', side_effect=Exception('down'))
+    def test_send_telegram_returns_failure(self, mock_post):
         from devices.notifications import send_telegram
         self.assertFalse(send_telegram(123, 'тест'))
 
@@ -429,8 +429,8 @@ class VerificationTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn('spreadsheetml', resp['Content-Type'])
 
-    @patch('devices.notifications.urllib.request.urlopen')
-    def test_reminder_sent_once(self, mock_urlopen):
+    @patch('devices.notifications.requests.post')
+    def test_reminder_sent_once(self, mock_post):
         from devices.notifications import run_verification_reminders
         sub = User.objects.create_user('medic')
         sub.profile.notify_verification_expiry = True
@@ -439,13 +439,12 @@ class VerificationTests(TestCase):
         self._verified(5)
 
         self.assertEqual(run_verification_reminders(), 1)
-        calls = mock_urlopen.call_args_list
+        calls = mock_post.call_args_list
         self.assertEqual(len(calls), 1)
-        body = json.loads(calls[0][0][0].data)
-        self.assertEqual(body['chat_id'], 999)
+        self.assertEqual(calls[0].kwargs['data']['chat_id'], 999)
 
         self.assertEqual(run_verification_reminders(), 0)  # повторно не шлём
-        self.assertEqual(mock_urlopen.call_count, 1)
+        self.assertEqual(mock_post.call_count, 1)
 
 
 class UptimeTests(TestCase):

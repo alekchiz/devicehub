@@ -6,3 +6,5 @@ python-telegram-bot
 asgiref
 python-dotenv
 gunicorn
+requests
+PySocks
