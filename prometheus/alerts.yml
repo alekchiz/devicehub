@@ -1,0 +1,21 @@
+groups:
+  - name: node_alerts
+    rules:
+      - alert: NodeDown
+        expr: up{job="node"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Сервер недоступен для мониторинга (node_exporter)"
+      - alert: HighDiskUsage
+        expr: 100 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100) > 90
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Диск заполнен более чем на 90%"
+      - alert: HighLoad
+        expr: node_load1 > (count(node_cpu_seconds_total{mode="idle"})) * 1.5
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Высокая нагрузка на CPU"

@@ -122,6 +122,47 @@ services:
       timeout: 5s
       retries: 3
 
+  node-exporter:
+    image: prom/node-exporter:latest
+    command: ["--path.rootfs=/host"]
+    pid: host
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /:/host:ro,rslave
+
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prom_data:/prometheus
+    depends_on:
+      - node-exporter
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./prometheus/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
   celery:
     build: .
     command: python -m celery -A core worker --loglevel=info --concurrency=2
@@ -175,3 +216,5 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  prom_data:
+  grafana_data:
