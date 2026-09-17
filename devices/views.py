@@ -873,47 +873,24 @@ def device_deploy_agent(request, pk):
 
 @user_passes_test(is_admin)
 def device_full_setup(request, pk):
-    """Одной кнопкой: сменить пароль + закинуть info2mqtt + настроить VNC."""
+    """Одной кнопкой: сменить пароль + info2mqtt + VNC (запускается в фоне
+    через Celery, чтобы не блокировать запрос SSH-операциями)."""
     device = get_object_or_404(Device, pk=pk)
     if request.method == 'POST':
         if not device.vpn_ip or device.vpn_ip in ('0', 'N/A'):
             messages.error(request, f'{device.hostname}: нет VPN IP')
             return redirect('device_detail_page', pk=pk)
-
-        steps = []
-
-        ok, msg = ssh_change_password(device, settings.DEVICE_SSH_PASSWORD)
-        if ok:
-            Device.objects.filter(pk=device.pk).update(
-                ssh_password=settings.DEVICE_SSH_PASSWORD)
-        steps.append(('🔑 Пароль', ok, msg))
-
-        import os as _os
-        local = _os.path.join(settings.BASE_DIR, 'client', 'info2mqtt.py')
-        if _os.path.exists(local):
-            ok2, msg2 = _scp_put(device, local, '/home/terminal/rtk/info2mqtt.py')
-            steps.append(('📡 info2mqtt', ok2, msg2))
-            if ok2:
-                Device.objects.filter(pk=device.pk).update(agent_deployed=True)
-        else:
-            steps.append(('📡 info2mqtt', False, 'файл не найден в client/'))
-
-        vnc_pass = getattr(settings, 'DEVICE_VNC_PASSWORD', '') or settings.DEVICE_SSH_PASSWORD
-        r = _ssh_vnc_setup(device, vnc_pass)
-        ok3 = r.returncode == 0
-        if ok3:
-            vnc_msg = 'VNC настроен (порт 5900)'
-        else:
-            vnc_msg = _clean_ssh_msg(r.stderr) or f'ошибка (код {r.returncode})'
-        steps.append(('👁 VNC', ok3, vnc_msg))
-        if ok3:
-            Device.objects.filter(pk=device.pk).update(vnc_ready=True)
-
-        for name, okx, msgx in steps:
-            if okx:
-                messages.success(request, f'{device.hostname}: {name} — {msgx}')
-            else:
-                messages.warning(request, f'{device.hostname}: {name} — {msgx}')
+        admin_tg = getattr(request.user.profile, 'telegram_id', None)
+        from devices.tasks import full_setup_device
+        try:
+            full_setup_device.delay(device.pk, admin_tg)
+            messages.info(
+                request,
+                f'{device.hostname}: Полная настройка запущена в фоне.'
+                f"{' Результат придёт сообщением в Telegram.' if admin_tg else ''}")
+        except Exception as e:  # noqa: BLE001
+            logger.error('full_setup: ошибка постановки задачи: %s', e)
+            messages.error(request, f'{device.hostname}: не удалось запустить фоновую задачу')
     return redirect('device_detail_page', pk=pk)
 
 

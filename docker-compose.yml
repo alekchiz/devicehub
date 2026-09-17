@@ -122,6 +122,33 @@ services:
       timeout: 5s
       retries: 3
 
+  celery:
+    build: .
+    command: python -m celery -A core worker --loglevel=info --concurrency=2
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings_docker
+      - DB_HOST=db
+      - TZ=Europe/Moscow
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /root/.ssh:/root/.ssh:ro
+      - /etc/hosts:/etc/hosts:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os; os.kill(1, 0)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   bot:
     build: .
     command: python -u manage.py telegram_bot

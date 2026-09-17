@@ -157,6 +157,12 @@ REDIS_URL = os.getenv('REDIS_URL', '')
 # TTL агрегатов шапки дашборда. 0 = не кешировать (используется в тестах,
 # чтобы не видеть «протухшие» счётчики между тест-кейсами).
 STATS_CACHE_TTL = int(os.getenv('STATS_CACHE_TTL', '8'))
+
+# Celery: брокер и бэкенд — Redis (тот же сервис, другая БД). По умолчанию
+# локальный Redis, в Docker перекрывается в settings_docker.
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_TASK_IGNORE_RESULT = True
 # Кэш, общий для всех gunicorn-воркеров (rate-limit логина и тяжёлые агрегаты).
 # Если задан REDIS_URL — используем Redis (django-redis); иначе фолбэк на таблицу.
 if REDIS_URL:

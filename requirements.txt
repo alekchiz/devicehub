@@ -10,3 +10,4 @@ requests
 PySocks
 redis
 django-redis
+celery
