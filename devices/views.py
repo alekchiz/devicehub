@@ -14,6 +14,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
 from django.core.paginator import Paginator
+from django.core.cache import cache
 from core.excel_utils import new_workbook, xlsx_response, style_header_row, autosize_columns
 
 logger = logging.getLogger(__name__)
@@ -401,6 +402,34 @@ def _module_enabled(content, key):
             return stripped.startswith('#')
     return True
 
+def _dashboard_stats(ttl=8):
+    """Счётчики шапки и суточные агрегаты осмотров — кешируем, чтобы не бить
+    Postgres по несколько раз на открытую вкладку (дашборд + status-feed)."""
+    ttl = ttl if getattr(settings, 'STATS_CACHE_TTL', 8) else 0
+    data = cache.get('dashboard_stats') if ttl else None
+    if data is None:
+        dev = Device.objects.all()
+        total = dev.count()
+        online = dev.filter(is_online=True, in_repair=False).count()
+        offline = dev.filter(is_online=False, in_repair=False).count()
+        in_repair = dev.filter(in_repair=True).count()
+        today = timezone.localdate()
+        agg = DailyExam.objects.filter(date=today).aggregate(
+            exams=Sum('exams'), cancelled=Sum('cancelled'))
+        week_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+        week_agg = dict(
+            DailyExam.objects.filter(date__gte=week_days[0], date__lte=today)
+            .values('date').annotate(total=Sum('exams')).values_list('date', 'total'))
+        week_exams = [{'date': d, 'total': week_agg.get(d, 0)} for d in week_days]
+        week_max = max((x['total'] for x in week_exams), default=1) or 1
+        data = {
+            'total': total, 'online': online, 'offline': offline, 'in_repair': in_repair,
+            'today_exams': agg['exams'] or 0, 'today_cancelled': agg['cancelled'] or 0,
+            'week_exams': week_exams, 'week_max': week_max,
+        }
+        cache.set('dashboard_stats', data, ttl)
+    return data
+
 @login_required
 def dashboard(request):
     query = request.GET.get('q', '')
@@ -421,10 +450,11 @@ def dashboard(request):
     active_filters = bool(query or status_filter)
     search_mode = bool(query)
 
-    total_count = all_devices.count()
-    online_count = all_devices.filter(is_online=True, in_repair=False).count()
-    offline_count = all_devices.filter(is_online=False, in_repair=False).count()
-    repair_count = all_devices.filter(in_repair=True).count()
+    stats = _dashboard_stats()
+    total_count = stats['total']
+    online_count = stats['online']
+    offline_count = stats['offline']
+    repair_count = stats['in_repair']
 
     # Прогресс активных ремонтов для карточек киосков.
     repair_map = {}
@@ -494,20 +524,11 @@ def dashboard(request):
             _latest_exams=Subquery(latest_snapshot.values('exams')[:1]),
         ).values_list('pk', '_latest_exams')
     )
-    # Агрегаты за сегодняшние московские сутки (для шапки дашборда).
-    today = timezone.localdate()
-    today_qs = DailyExam.objects.filter(date=today)
-    today_agg = today_qs.aggregate(exams=Sum('exams'), cancelled=Sum('cancelled'))
-    today_exams_total = today_agg['exams'] or 0
-    today_cancelled_total = today_agg['cancelled'] or 0
-    # Осмотры по дням за последнюю неделю (для мини-графика дашборда).
-    week_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
-    week_agg = dict(
-        DailyExam.objects.filter(date__gte=week_days[0], date__lte=today)
-        .values('date').annotate(total=Sum('exams'))
-        .values_list('date', 'total'))
-    week_exams = [{'date': d, 'total': week_agg.get(d, 0)} for d in week_days]
-    week_max = max((x['total'] for x in week_exams), default=1) or 1
+    # Агрегаты за сегодняшнюю московские сутки и неделю (для шапки дашборда).
+    today_exams_total = stats['today_exams']
+    today_cancelled_total = stats['today_cancelled']
+    week_exams = stats['week_exams']
+    week_max = stats['week_max']
 
     if repair_count:
         page_status = 'repair'
@@ -617,16 +638,17 @@ def device_history(request):
 @login_required
 def device_status_feed(request):
     """JSON-эндпоинт для живого обновления карточек на дашборде."""
-    devices = Device.objects.all()
-    total = devices.count()
-    online = devices.filter(is_online=True, in_repair=False).count()
-    offline = devices.filter(is_online=False, in_repair=False).count()
-    repair = devices.filter(in_repair=True).count()
+    stats = _dashboard_stats()
+    total = stats['total']
+    online = stats['online']
+    offline = stats['offline']
+    repair = stats['in_repair']
 
     # Детали по киоскам отдаём только для текущей страницы (?ids=1,2,3...),
     # чтобы не гонять по сети JSON по всем 500+ киоскам каждые 5 секунд.
     ids_param = request.GET.get('ids', '')
     page_ids = [int(x) for x in ids_param.split(',') if x.isdigit()]
+    devices = Device.objects.all()
     page_devices = Device.objects.filter(pk__in=page_ids) if page_ids else devices
 
     now = timezone.now()
@@ -644,18 +666,14 @@ def device_status_feed(request):
 
     page_status = 'repair' if repair else ('warn' if offline else 'ok')
 
-    today = timezone.localdate()
-    exam_agg = DailyExam.objects.filter(date=today).aggregate(
-        exams=Sum('exams'), cancelled=Sum('cancelled'))
-
     payload = {
         'total': total,
         'online': online,
         'offline': offline,
         'repair': repair,
         'page_status': page_status,
-        'exams_today': exam_agg['exams'] or 0,
-        'cancelled_today': exam_agg['cancelled'] or 0,
+        'exams_today': stats['today_exams'],
+        'cancelled_today': stats['today_cancelled'],
         'now': timezone.localtime().strftime('%H:%M:%S'),
         'devices': {},
     }

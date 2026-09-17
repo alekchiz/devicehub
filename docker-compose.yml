@@ -40,13 +40,24 @@ services:
       retries: 5
       start_period: 10s
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   web:
     build: .
     command: >
       sh -c "python manage.py migrate --noinput &&
-             python manage.py createcachetable &&
              python manage.py collectstatic --noinput &&
-             gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 30"
+             gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 5 --timeout 60"
     environment:
       - DJANGO_SETTINGS_MODULE=core.settings_docker
       - DB_HOST=db
@@ -55,6 +66,8 @@ services:
       - .env
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - .:/app
@@ -134,3 +147,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

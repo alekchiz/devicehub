@@ -153,14 +153,30 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CACHES = {
-    'default': {
-        # Учитывая несколько gunicorn-воркеров, используем общий кэш в БД,
-        # чтобы rate-limit логина работал одинаково для всех процессов.
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'django_cache',
+REDIS_URL = os.getenv('REDIS_URL', '')
+# TTL агрегатов шапки дашборда. 0 = не кешировать (используется в тестах,
+# чтобы не видеть «протухшие» счётчики между тест-кейсами).
+STATS_CACHE_TTL = int(os.getenv('STATS_CACHE_TTL', '8'))
+# Кэш, общий для всех gunicorn-воркеров (rate-limit логина и тяжёлые агрегаты).
+# Если задан REDIS_URL — используем Redis (django-redis); иначе фолбэк на таблицу.
+if REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'IGNORE_EXCEPTIONS': True,
+            },
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+            'LOCATION': 'django_cache',
+        }
+    }
 
 # Логи телеметрии (mqtt_listener2) должны быть видны в `docker compose logs`.
 # По умолчанию root-логгер — WARNING, поэтому info-сообщения листенера

@@ -16,6 +16,10 @@ CACHES = {
     }
 }
 
+# Не кешируем агрегаты дашборда в тестах — кеш живёт между тестами и
+# «протухшие» счётчики ломали бы проверки.
+STATS_CACHE_TTL = 0
+
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
