@@ -168,9 +168,19 @@ class Command(BaseCommand):
             return
         
         builder = Application.builder().token(token)
+        # Через VLESS-прокси соединение медленнее: увеличиваем таймауты,
+        # иначе PTB не успевает в дефолтные ~5 c (httpx.ConnectTimeout)
+        # и бот «висит» без обработки обновлений.
+        builder.connect_timeout(25).read_timeout(120).write_timeout(30).pool_timeout(25)
+        builder.get_updates_connect_timeout(25).get_updates_read_timeout(120) \
+            .get_updates_write_timeout(30).get_updates_pool_timeout(25)
         proxy = getattr(settings, 'TELEGRAM_PROXY', '')
         if proxy:
             builder.proxy(proxy)
+            # Прокси для самого getUpdates-поллинга задаётся отдельно:
+            # без него апдейтер ходит напрямую к api.telegram.org (заблокировано
+            # в РФ) => TimedOut и «мёртвый» бот. only bot-клиент via proxy.
+            builder.get_updates_proxy(proxy)
         app = builder.build()
         
         reg_handler = ConversationHandler(
