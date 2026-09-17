@@ -448,32 +448,40 @@ function applyStatus(payload) {
         if (!card) return;
         var d = payload.devices[id];
 
-        card.className = 'device-card card h-100 ' + (d.in_repair ? 'repair' : (d.online ? 'online' : 'offline'));
-        if (card.getAttribute('data-ns') === '1') card.className += ' nonstandard';
+        // Меняем DOM только при реальных изменениях, иначе каждый 5-сек тик
+        // перезаписывает классы/ширины всех карточек и дёргает layout.
+        var st = d.in_repair ? 'repair' : (d.online ? 'online' : 'offline');
+        var newCls = 'device-card card h-100 ' + st;
+        if (card.getAttribute('data-ns') === '1') newCls += ' nonstandard';
+        if (card.className !== newCls) card.className = newCls;
 
         var badge = document.getElementById('badge-' + id);
         if (badge) {
-            badge.className = 'badge-soft ' + (d.in_repair ? 'repair' : (d.online ? 'online' : 'offline'));
-            badge.title = d.in_repair ? 'Ремонт' : (d.online ? 'Онлайн' : 'Оффлайн');
+            var bCls = 'badge-soft ' + st;
+            if (badge.className !== bCls) badge.className = bCls;
+            var bt = d.in_repair ? 'Ремонт' : (d.online ? 'Онлайн' : 'Оффлайн');
+            if (badge.title !== bt) badge.title = bt;
         }
 
         var off = document.getElementById('offline-' + id);
         if (off) {
-            if (d.offline_duration) {
-                off.style.display = '';
+            var shown = d.offline_duration ? '1' : '0';
+            if (off.dataset.v !== shown) { off.style.display = shown ? '' : 'none'; off.dataset.v = shown; }
+            if (shown && off.dataset.dur !== d.offline_duration) {
                 off.innerHTML = '<i class="bi bi-clock"></i> ' + d.offline_duration;
-            } else {
-                off.style.display = 'none';
+                off.dataset.dur = d.offline_duration;
             }
         }
 
         function applyBar(fillId, valId, val, cpu) {
             var fill = document.getElementById(fillId);
             if (!fill || val === null || val === undefined) return;
-            fill.style.width = Math.max(0, Math.min(100, val)).toFixed(0) + '%';
-            fill.className = 'metric-fill ' + barColor(val, cpu);
+            var pct = Math.max(0, Math.min(100, val)).toFixed(0);
+            var cls = 'metric-fill ' + barColor(val, cpu);
+            if (fill.dataset.w !== pct) { fill.style.width = pct + '%'; fill.dataset.w = pct; }
+            if (fill.dataset.c !== cls) { fill.className = cls; fill.dataset.c = cls; }
             var valEl = document.getElementById(valId);
-            if (valEl) valEl.textContent = Math.round(val) + '%';
+            if (valEl && valEl.textContent !== Math.round(val) + '%') valEl.textContent = Math.round(val) + '%';
         }
         applyBar('mCpu-' + id, 'mCpuVal-' + id, d.cpu, true);
         applyBar('mHdd-' + id, 'mHddVal-' + id, d.hdd, false);

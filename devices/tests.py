@@ -211,9 +211,9 @@ class DeviceViewsTests(TestCase):
         for i in range(60):
             Device.objects.create(hostname=f'{3000+i}')
         resp = self.client.get(reverse('dashboard'))
-        # 60 новых + 1 из setUp = 61 — все на одной странице, без пагинации.
+        # 60 новых + 1 из setUp = 61 → 2 страницы по 50 на первую.
         self.assertContains(resp, 'Всего: <b>61</b>')
-        self.assertNotContains(resp, 'page=2')
+        self.assertContains(resp, 'page=2')
 
     def test_search_shows_all_matching(self):
         self.client.force_login(_technician())
@@ -221,7 +221,7 @@ class DeviceViewsTests(TestCase):
             Device.objects.create(hostname=f'{200+i}')
         resp = self.client.get(reverse('dashboard') + '?q=2')
         self.assertContains(resp, 'Найдено: <b>61</b>')  # 60 новых + '123' из setUp
-        self.assertNotContains(resp, 'page=2')
+        self.assertContains(resp, 'page=2')
 
     def test_status_chip_filters(self):
         self.client.force_login(_technician())

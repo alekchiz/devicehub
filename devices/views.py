@@ -526,10 +526,10 @@ def dashboard(request):
     }
     reset_url = clear_qs or '?'
 
-    # Рендер всех сотен карточек разом тормозит страницу: режем по 100.
+    # Рендер сотен карточек разом тормозит прокрутку: режем по 50.
     from django.core.paginator import Paginator
     result_count = len(device_list)
-    paginator = Paginator(device_list, 100)
+    paginator = Paginator(device_list, 50)
     page_obj = paginator.get_page(request.GET.get('page'))
     devices = page_obj.object_list
     # base_qs без ведущего '?': пагинация строит «?page=N{base_qs}».
