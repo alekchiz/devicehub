@@ -623,6 +623,25 @@ def device_status_feed(request):
     offline = devices.filter(is_online=False, in_repair=False).count()
     repair = devices.filter(in_repair=True).count()
 
+    # Детали по киоскам отдаём только для текущей страницы (?ids=1,2,3...),
+    # чтобы не гонять по сети JSON по всем 500+ киоскам каждые 5 секунд.
+    ids_param = request.GET.get('ids', '')
+    page_ids = [int(x) for x in ids_param.split(',') if x.isdigit()]
+    page_devices = Device.objects.filter(pk__in=page_ids) if page_ids else devices
+
+    now = timezone.now()
+    def _duration(dev):
+        if dev.is_online or not dev.offline_since:
+            return None
+        delta = now - dev.offline_since
+        hours, remainder = divmod(delta.seconds, 3600)
+        minutes = remainder // 60
+        if delta.days > 0:
+            return f"{delta.days}д {hours}ч {minutes}м"
+        if hours > 0:
+            return f"{hours}ч {minutes}м"
+        return f"{minutes}м"
+
     page_status = 'repair' if repair else ('warn' if offline else 'ok')
 
     today = timezone.localdate()
@@ -641,14 +660,14 @@ def device_status_feed(request):
         'devices': {},
     }
 
-    for d in devices:
+    for d in page_devices:
         payload['devices'][d.id] = {
             'online': bool(d.is_online),
             'in_repair': bool(d.in_repair),
             'cpu': d.cpu_load,
             'hdd': d.hdd_percent,
             'ram': d.memory_percent,
-            'offline_duration': d.offline_duration,
+            'offline_duration': _duration(d),
             'temperature': d.temperature,
             'uptime': d.uptime_formatted,
         }

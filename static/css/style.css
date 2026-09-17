@@ -471,6 +471,12 @@ body {
     display: flex;
     flex-direction: column;
 }
+/* Сотни карточек тормозят прокрутку: не отрисовываем то, что вне viewport.
+   contain-intrinsic-size — резервная высота для корректного скролла. */
+.device-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 280px;
+}
 .device-card::before {
     content: '';
     position: absolute;

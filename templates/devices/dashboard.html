@@ -481,8 +481,12 @@ function applyStatus(payload) {
     });
 }
 
+var DASHBOARD_IDS = [{% for d in devices %}{{ d.pk }},{% endfor %}];
+
 function refreshStatus() {
-    fetch('{% url 'device_status_feed' %}')
+    // Спрашиваем детали только по карточкам текущей страницы.
+    var url = '{% url 'device_status_feed' %}' + '?ids=' + DASHBOARD_IDS.join(',');
+    fetch(url)
         .then(function (r) { return r.json(); })
         .then(applyStatus)
         .catch(function (e) { console.warn('status poll failed', e); });
