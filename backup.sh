@@ -16,6 +16,8 @@ BACKUP_DIR="${BACKUP_DIR:-$REMOTE_DIR/backups}"
 DB_USER="${DB_USER:-devicehub}"
 DB_NAME="${DB_NAME:-device_hub}"
 KEEP_DAYS="${KEEP_DAYS:-14}"
+# Пароль БД берём из .env рядом со скриптом (контейнер db авторизуется по паролю).
+DB_PASS="${DB_PASSWORD:-$(grep -E '^DB_PASSWORD=' .env | cut -d= -f2-)}"
 
 mkdir -p "$BACKUP_DIR"
 stamp="$(date +%Y%m%d_%H%M)"
@@ -25,7 +27,7 @@ file="$BACKUP_DIR/devicehub_${stamp}.dump"
 echo "==> Дамп БД ($DB_NAME) в $file"
 
 # Дамп пишем во временный файл: недобитый бэкап не должен считаться готовым.
-if ! docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" -Fc > "$tmp"; then
+if ! docker compose exec -T -e PGPASSWORD="$DB_PASS" db pg_dump -U "$DB_USER" "$DB_NAME" -Fc > "$tmp"; then
     echo "❌ Ошибка создания дампа" >&2
     rm -f "$tmp"
     exit 1
@@ -39,11 +41,16 @@ if [ ! -s "$tmp" ]; then
 fi
 
 # Проверка читаемости дампа через pg_restore внутри контейнера.
-if ! docker compose exec -T db pg_restore -l - < "$tmp" >/dev/null 2>&1; then
+# Заносим дамп в контейнер файлом — pg_restore из stdin через compose-exec не
+# читает поток надёжно.
+if ! docker compose exec -T db sh -c 'cat > /tmp/_chk.dump' < "$tmp" \
+   || ! docker compose exec -T -e PGPASSWORD="$DB_PASS" db pg_restore -l /tmp/_chk.dump >/dev/null 2>&1; then
     echo "❌ Дамп не прошёл проверку pg_restore, буде удалён" >&2
+    docker compose exec -T db rm -f /tmp/_chk.dump 2>/dev/null || true
     rm -f "$tmp"
     exit 1
 fi
+docker compose exec -T db rm -f /tmp/_chk.dump 2>/dev/null || true
 
 mv "$tmp" "$file"
 size="$(du -h "$file" | cut -f1)"
