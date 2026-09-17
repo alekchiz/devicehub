@@ -501,7 +501,16 @@ function refreshStatus() {
 }
 
 refreshStatus();
-setInterval(refreshStatus, 5000);
+
+// Реалтайм-обновления через SSE (Redis-событие при изменении киоска).
+// Троттлим: не чаще раза в 2 с. Запасной опрос — раз в 30 с.
+var sseTimer = null;
+var sse = new EventSource('{% url 'dashboard_events' %}');
+sse.onmessage = function () {
+    if (sseTimer) return;
+    sseTimer = setTimeout(function () { sseTimer = null; refreshStatus(); }, 2000);
+};
+setInterval(refreshStatus, 30000);
 
 // Восстановление фокуса/курсора и прокрутки после автоприменения поиска.
 function restoreUI() {

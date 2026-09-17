@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 import re
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.db.models import Q, Count, Sum, OuterRef, Subquery
 from .models import Device, Owner, Client, Location, Repair, Verification, DeviceEvent, DailyExam
 from tickets.models import Ticket
@@ -691,6 +691,37 @@ def device_status_feed(request):
         }
 
     return JsonResponse(payload)
+
+@login_required
+def dashboard_events(request):
+    """SSE-поток: подписывается на Redis-канал 'device_events' и шлёт клиенту
+    событие при изменении киоска. Клиент по событию дёргает device_status_feed."""
+    import redis
+
+    r = redis.from_url(settings.REDIS_URL, socket_timeout=5, socket_connect_timeout=5)
+    ps = r.pubsub()
+    ps.subscribe('device_events')
+
+    def event_stream():
+        try:
+            while True:
+                msg = ps.get_message(ignore_subscribe_messages=True, timeout=25)
+                if msg and msg.get('type') == 'message':
+                    yield f"data: {msg['data'].decode()}\n\n"
+                else:
+                    yield ": keepalive\n\n"
+        except GeneratorExit:
+            pass
+        finally:
+            try:
+                ps.close()
+            except Exception:
+                pass
+
+    resp = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    resp['Cache-Control'] = 'no-cache'
+    resp['X-Accel-Buffering'] = 'no'
+    return resp
 
 @login_required
 def device_detail_modal(request, pk):

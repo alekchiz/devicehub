@@ -13,6 +13,22 @@ from devices.exam_ingest import extract_day_date, ingest_day_snapshot
 
 logger = logging.getLogger('devices.mqtt')
 
+_redis_pub = None
+
+
+def _publish_device(device_id):
+    """Сообщает SSE-клиентам дашборда, что киоск изменился (Redis pub/sub)."""
+    global _redis_pub
+    try:
+        import redis as _redis_module
+        if _redis_pub is None:
+            _redis_pub = _redis_module.from_url(
+                settings.REDIS_URL, socket_timeout=2, socket_connect_timeout=2)
+        _redis_pub.publish('device_events', str(device_id))
+    except Exception:  # noqa: BLE001
+        pass
+
+
 MQTT_BROKER = settings.MQTT_BROKER
 MQTT_PORT = settings.MQTT_PORT
 MQTT_USER = settings.MQTT_USER
@@ -128,6 +144,7 @@ def on_message(client, userdata, msg):
         logger.info('%s device: %s | online | cpu=%s%% | ram=%s%% | disk=%s%%',
                     status, host, defaults.get('cpu_load', '?'),
                     defaults.get('memory_percent', '?'), defaults.get('hdd_percent', '?'))
+        _publish_device(device.id)
 
         check_offline_devices(OFFLINE_TIMEOUT)
 
